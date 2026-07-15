@@ -15,19 +15,22 @@ export function normalizePost(post) {
 
 export function loadPosts(defaultPosts = []) {
   if (typeof window === 'undefined') {
-    return defaultPosts.map(normalizePost)
+    return defaultPosts.map((post) => normalizePost({ ...post, comments: [] }))
   }
 
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (!saved) {
-      return defaultPosts.map(normalizePost)
-    }
+    const basePosts = saved ? JSON.parse(saved) : defaultPosts
+    const cleanedPosts = (Array.isArray(basePosts) ? basePosts : defaultPosts).map((post) =>
+      normalizePost({ ...post, comments: [] })
+    )
 
-    const parsed = JSON.parse(saved)
-    return Array.isArray(parsed) ? parsed.map(normalizePost) : defaultPosts.map(normalizePost)
+    savePosts(cleanedPosts)
+    return cleanedPosts
   } catch {
-    return defaultPosts.map(normalizePost)
+    const cleanedPosts = defaultPosts.map((post) => normalizePost({ ...post, comments: [] }))
+    savePosts(cleanedPosts)
+    return cleanedPosts
   }
 }
 

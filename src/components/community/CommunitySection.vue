@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import SearchBar from './SearchBar.vue'
 import BoardTable from './BoardTable.vue'
 import BoardDetail from './BoardDetail.vue'
 import Pagination from './Pagination.vue'
@@ -22,13 +21,16 @@ const posts = ref([])
 const searchTerm = ref('')
 const selectedPostId = ref(null)
 const currentPage = ref(1)
-const pageSize = 4
+const pageSize = 5
 const searchField = ref('all')
+const activeTab = ref('전체')
 const showCreateForm = ref(false)
 const editingPostId = ref(null)
 const passwordInput = ref('')
 const passwordError = ref('')
 const commentText = ref('')
+
+const tabs = ['전체', '맛집', '여행지', '축제', '카페', '기타']
 
 onMounted(() => {
   const loaded = loadPosts(postsData)
@@ -38,7 +40,14 @@ onMounted(() => {
   }
 })
 
-const filteredPosts = computed(() => filterPosts(posts.value, searchTerm.value, searchField.value))
+const filteredPosts = computed(() => {
+  let result = filterPosts(posts.value, searchTerm.value, searchField.value)
+  if (activeTab.value !== '전체') {
+    result = result.filter((post) => post.category === activeTab.value)
+  }
+  return result
+})
+
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredPosts.value.length / pageSize)))
 
 const pagedPosts = computed(() => {
@@ -55,10 +64,6 @@ function selectPost(postId) {
   passwordError.value = ''
   passwordInput.value = ''
   commentText.value = ''
-  if (!posts.value.find((post) => post.id === postId)?.views) {
-    // no-op
-  }
-
   const updated = incrementViewCount(posts.value, postId)
   posts.value = updated
   savePosts(posts.value)
@@ -139,168 +144,216 @@ watch(searchTerm, () => {
 </script>
 
 <template>
-  <section class="community-section">
-    <div class="section-header">
+  <section class="community-shell">
+    <div class="community-header">
       <div>
         <p class="eyebrow">Community</p>
-        <h2>부산 여행 커뮤니티</h2>
+        <h1>부산 커뮤니티</h1>
       </div>
-      <p class="description">익명으로 자유롭게 이야기하고, 여행 이야기를 나눠보세요.</p>
+      <button class="write-button" @click="toggleCreateForm">
+        <span class="plus-icon">＋</span>
+        글쓰기
+      </button>
     </div>
 
-    <div class="toolbar">
-      <div class="search-controls">
-        <SearchBar v-model="searchTerm" placeholder="검색어를 입력하세요" />
+    <div class="search-area">
+      <div class="search-select-wrap">
         <select v-model="searchField" class="search-select">
-          <option value="all">전체</option>
+          <option value="all">구분</option>
           <option value="title">제목</option>
           <option value="category">카테고리</option>
           <option value="content">내용</option>
         </select>
       </div>
-      <div class="toolbar-actions">
-        <p class="result-count">총 {{ filteredPosts.length }}개</p>
-        <button class="write-button" @click="toggleCreateForm">글쓰기</button>
+      <div class="search-input-wrap">
+        <input v-model="searchTerm" type="text" placeholder="검색어를 입력하세요" />
+        <button class="search-button" type="button">⌕</button>
       </div>
+    </div>
+
+    <div class="tab-row">
+      <button
+        v-for="tab in tabs"
+        :key="tab"
+        class="tab-button"
+        :class="{ active: activeTab === tab }"
+        @click="activeTab = tab"
+      >
+        {{ tab }}
+      </button>
     </div>
 
     <CreatePostForm v-if="showCreateForm" class="create-form" @submit="handleCreatePost" />
 
-    <div class="content-grid">
-      <div class="board-panel">
-        <BoardTable :posts="pagedPosts" :selected-post-id="selectedPostId" @select-post="selectPost" />
-        <Pagination :current-page="currentPage" :total-pages="totalPages" @change-page="changePage" />
-      </div>
-      <BoardDetail
-        :post="selectedPost"
-        :editing-post-id="editingPostId"
-        :password-input="passwordInput"
-        :password-error="passwordError"
-        :comment-text="commentText"
-        @like-post="likePost"
-        @delete-post="deletePost"
-        @edit-post="openEditMode"
-        @submit-edit="submitEdit"
-        @verify-password="verifyPassword"
-        @update:password-input="(value) => (passwordInput = value)"
-        @update:comment-text="(value) => (commentText = value)"
-        @add-comment="addCommentToPost"
-      />
+    <div class="board-card">
+      <BoardTable :posts="pagedPosts" :selected-post-id="selectedPostId" @select-post="selectPost" />
+      <Pagination :current-page="currentPage" :total-pages="totalPages" @change-page="changePage" />
     </div>
+
+    <BoardDetail
+      :post="selectedPost"
+      :editing-post-id="editingPostId"
+      :password-input="passwordInput"
+      :password-error="passwordError"
+      :comment-text="commentText"
+      @like-post="likePost"
+      @delete-post="deletePost"
+      @edit-post="openEditMode"
+      @submit-edit="submitEdit"
+      @verify-password="verifyPassword"
+      @update:password-input="(value) => (passwordInput = value)"
+      @update:comment-text="(value) => (commentText = value)"
+      @add-comment="addCommentToPost"
+    />
   </section>
 </template>
 
 <style scoped>
-.community-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  width: 100%;
-  max-width: 1160px;
+.community-shell {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1.25rem 3rem;
+  min-height: 100vh;
+  background: #f8fafc;
 }
 
-.section-header {
+.community-header {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .eyebrow {
-  margin: 0 0 0.25rem;
-  color: #2563eb;
+  margin: 0 0 0.3rem;
+  color: #64748b;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-h2 {
+h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 2rem;
+  font-weight: 700;
   color: #0f172a;
 }
 
-.description {
-  margin: 0;
-  color: #64748b;
-  max-width: 320px;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.search-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex: 1;
-}
-
-.search-select {
-  border: 1px solid #dbe4ff;
-  border-radius: 999px;
-  padding: 0.7rem 0.9rem;
-  background: #fff;
-  color: #334155;
-}
-
-.toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.result-count {
-  margin: 0;
-  color: #475569;
-  font-weight: 600;
-}
-
 .write-button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   border: none;
   border-radius: 999px;
-  padding: 0.7rem 1rem;
+  padding: 0.8rem 1.1rem;
   background: #2563eb;
-  color: #fff;
+  color: white;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.create-form {
-  margin-top: 0.25rem;
+.plus-icon {
+  font-size: 1rem;
 }
 
-.content-grid {
-  display: grid;
-  grid-template-columns: 1.3fr 0.9fr;
-  gap: 1rem;
-}
-
-.board-panel {
+.search-area {
   display: flex;
-  flex-direction: column;
   gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-@media (max-width: 900px) {
-  .section-header,
-  .toolbar {
+.search-select-wrap {
+  width: 120px;
+}
+
+.search-select,
+.search-input-wrap input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  background: white;
+  font: inherit;
+  color: #334155;
+  outline: none;
+}
+
+.search-input-wrap input:focus,
+.search-select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.search-input-wrap input {
+  padding-right: 3rem;
+}
+
+.search-button {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.tab-button {
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  background: white;
+  color: #475569;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.create-form {
+  margin-bottom: 1rem;
+}
+
+.board-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 1rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 768px) {
+  .community-header {
     flex-direction: column;
     align-items: start;
+    gap: 0.8rem;
   }
 
-  .search-controls,
-  .toolbar-actions {
+  .search-area {
+    flex-direction: column;
+  }
+
+  .search-select-wrap {
     width: 100%;
-  }
-
-  .content-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

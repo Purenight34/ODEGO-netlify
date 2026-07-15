@@ -126,8 +126,9 @@ watch(
     </div>
 
     <div class="password-box">
-      <input :value="passwordInput" placeholder="비밀번호 확인" @input="emit('update:password-input', $event.target.value)" />
-      <button class="secondary-button" @click="verifyPassword">삭제 확인</button>
+      <p class="password-title">글 수정/삭제</p>
+      <input :value="passwordInput" placeholder="비밀번호" @input="emit('update:password-input', $event.target.value)" />
+      <button class="secondary-button compact" @click="verifyPassword">확인</button>
       <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
     </div>
 
@@ -266,6 +267,37 @@ h4 {
   flex-direction: column;
   gap: 0.6rem;
 }
+
+.password-box {
+  align-self: flex-end;
+  width: min(16rem, 100%);
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.password-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.password-box input {
+  height: 2rem;
+  padding: 0 0.7rem;
+  font-size: 0.9rem;
+}
+
+.password-box .compact {
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.85rem;
+}
+
 
 label {
   display: flex;

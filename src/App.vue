@@ -24,4 +24,21 @@ import ChatbotWidget from './components/chat/ChatbotWidget.vue'
   gap: 3rem;
   padding: 1.5rem 1.25rem 3rem;
 }
+
+html,
+body,
+#app {
+	min-height: 100%;
+	margin: 0;
+}
+
+body {
+	background: #f1f5f9;
+	font-family:
+		Pretendard,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		sans-serif;
+}
 </style>

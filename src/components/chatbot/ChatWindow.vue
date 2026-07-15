@@ -49,94 +49,90 @@ const loading = ref(false);
 
 const handleSend = async (text) => {
   if (!text || !text.toString().trim()) return;
+  console.groupCollapsed('Client send start');
+  console.log('message:', text);
+  console.log('messages snapshot:', JSON.parse(JSON.stringify(messages.value)));
+  console.groupEnd();
 
-  console.log('handleSend called with:', text);
-
-  // push user message
   messages.value.push({ role: 'user', content: text });
-
-  // push placeholder for bot
   messages.value.push({ role: 'bot', content: '잠시만 기다려주세요...' });
   loading.value = true;
 
   const attempts = [];
   const fetchWithTimeout = (input, init = {}, timeout = 15000) => {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
+    const id = setTimeout(() => {
+      controller.abort();
+      console.warn('fetch timeout aborted for', input);
+    }, timeout);
     return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(id));
   };
 
   try {
-    // Option A: direct client-side OpenAI (DEV ONLY) if VITE_OPENAI_API_KEY present
     const clientKey = import.meta.env.VITE_OPENAI_API_KEY;
     if (clientKey) {
-      const url = 'https://api.openai.com/v1/chat/completions';
+      attempts.push({ type: 'openai-direct', url: 'https://api.openai.com/v1/chat/completions' });
       try {
-        attempts.push({ type: 'openai-direct', url });
-        const upstream = await fetchWithTimeout(url, {
+        const upstream = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clientKey}` },
           body: JSON.stringify({ model: 'gpt-3.5-turbo', messages: messages.value.map(m => ({ role: m.role === 'user' ? 'user' : m.role || 'assistant', content: m.content })) })
         }, 20000);
-
-        const status = upstream.status;
-        const textResp = await upstream.text().catch(() => '');
-        attempts[attempts.length - 1].status = status;
-        attempts[attempts.length - 1].response = textResp;
-
-        if (!upstream.ok) {
-          throw new Error(`OpenAI direct returned ${status}: ${textResp}`);
-        }
-
+        const textResp = await upstream.text().catch(()=>'');
+        attempts[attempts.length-1].status = upstream.status;
+        attempts[attempts.length-1].response = textResp.slice(0,2000);
+        console.log('OpenAI direct attempt:', attempts[attempts.length-1]);
+        if (!upstream.ok) throw new Error(`OpenAI direct returned ${upstream.status}: ${textResp}`);
         const data = JSON.parse(textResp || '{}');
         const reply = data?.choices?.[0]?.message?.content || data?.choices?.[0]?.text || '';
         for (let i = messages.value.length - 1; i >= 0; i--) {
           if (messages.value[i].role === 'bot') { messages.value[i].content = reply || '응답이 없습니다.'; break; }
         }
-        console.log('OpenAI direct success', attempts);
+        console.log('OpenAI direct success');
         return;
       } catch (err) {
-        console.error('OpenAI direct error', err);
-        // continue to try Netlify function fallback
+        console.error('OpenAI direct error', err && (err.stack || err));
       }
     }
 
-    // Option B: call Netlify Function via relative path (preferred when using netlify dev)
     const relativeUrl = '/.netlify/functions/chat';
+    attempts.push({ type: 'netlify-function', url: relativeUrl, start: Date.now() });
     try {
-      attempts.push({ type: 'netlify-function', url: relativeUrl });
       let resp = await fetchWithTimeout(relativeUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
       }, 15000);
+      attempts[attempts.length-1].status = resp.status;
+      const respText = await resp.text().catch(()=>'');
+      attempts[attempts.length-1].response = respText.slice(0,2000);
+      console.log('Netlify function attempt:', attempts[attempts.length-1]);
 
-      attempts[attempts.length - 1].status = resp.status;
       if (resp.status === 404) {
-        // if opened on Vite port, the relative proxy may not exist — try Netlify Dev host
         const devUrl = `${window.location.protocol}//localhost:8889/.netlify/functions/chat`;
-        attempts.push({ type: 'netlify-function-dev', url: devUrl });
+        attempts.push({ type: 'netlify-function-dev', url: devUrl, start: Date.now() });
         try {
           resp = await fetchWithTimeout(devUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text })
           }, 15000);
-          attempts[attempts.length - 1].status = resp.status;
+          attempts[attempts.length-1].status = resp.status;
+          const respText2 = await resp.text().catch(()=>'');
+          attempts[attempts.length-1].response = respText2.slice(0,2000);
+          console.log('Netlify dev attempt:', attempts[attempts.length-1]);
         } catch (err) {
-          attempts[attempts.length - 1].error = String(err);
+          attempts[attempts.length-1].error = String(err);
+          console.error('Netlify dev fetch error', err);
           throw err;
         }
       }
 
-      const respText = await resp.text().catch(() => '');
-      attempts[attempts.length - 1].response = respText;
-
       if (!resp.ok) {
-        throw new Error(`Function returned ${resp.status}: ${respText}`);
+        throw new Error(`Function returned ${resp.status}: ${attempts[attempts.length-1].response || ''}`);
       }
 
-      const data = respText ? JSON.parse(respText) : null;
+      const data = attempts[attempts.length-1].response ? JSON.parse(attempts[attempts.length-1].response) : null;
       const reply = data?.reply || '';
       for (let i = messages.value.length - 1; i >= 0; i--) {
         if (messages.value[i].role === 'bot') { messages.value[i].content = reply || '응답이 없습니다.'; break; }
@@ -145,27 +141,19 @@ const handleSend = async (text) => {
       console.log('Netlify function success', attempts);
       return;
     } catch (err) {
-      console.error('Netlify function error', err);
-      // fall through to final error handler
+      console.error('Netlify function error', err && (err.stack || err));
       attempts.push({ type: 'final-error', error: String(err) });
     }
 
-    // If we reach here, all attempts failed
-    const shortMsg = '메시지 전송에 실패했습니다. 콘솔에서 상세 오류를 확인하세요.';
     for (let i = messages.value.length - 1; i >= 0; i--) {
-      if (messages.value[i].role === 'bot') {
-        messages.value[i].content = shortMsg;
-        break;
-      }
+      if (messages.value[i].role === 'bot') { messages.value[i].content = '메시지 전송에 실패했습니다. 콘솔에서 상세 오류를 확인하세요.'; break; }
     }
     console.error('All send attempts failed:', attempts);
-
   } catch (e) {
-    // unexpected
     for (let i = messages.value.length - 1; i >= 0; i--) {
       if (messages.value[i].role === 'bot') { messages.value[i].content = '알 수 없는 오류가 발생했습니다.'; break; }
     }
-    console.error('Unexpected error in handleSend:', e);
+    console.error('Unexpected error in handleSend:', e && (e.stack || e));
   } finally {
     loading.value = false;
   }

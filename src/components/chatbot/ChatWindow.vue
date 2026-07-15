@@ -3,13 +3,18 @@
 
     <ChatHeader @close="$emit('close')" />
 
+    <div class="chat-token" v-if="tokenInfo">
+      토큰: {{ tokenInfo.used }} / {{ tokenInfo.limit }}
+    </div>
+
     <div class="chat-body">
 
       <ChatMessage
         v-for="(m, i) in messages"
         :key="i"
         :sender="m.role === 'user' ? 'user' : 'bot'"
-        :message="m.content"
+        :message="m.preview ?? m.content"
+        :fullMessage="m.content"
       />
 
       <!-- 추천 질문 -->
@@ -46,6 +51,7 @@ const messages = ref([
 ]);
 
 const loading = ref(false);
+const tokenInfo = ref(null); // { used: number, limit: number }
 
 const handleSend = async (text) => {
   if (!text || !text.toString().trim()) return;
@@ -71,9 +77,9 @@ const handleSend = async (text) => {
   try {
     const clientKey = import.meta.env.VITE_OPENAI_API_KEY;
     if (clientKey) {
-      attempts.push({ type: 'openai-direct', url: 'https://api.openai.com/v1/chat/completions' });
+      attempts.push({ type: 'openai-direct', url: 'https://api.openai.com/v1/responses' });
       try {
-        const upstream = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
+        const upstream = await fetchWithTimeout('https://api.openai.com/v1/responses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clientKey}` },
           body: JSON.stringify({ model: 'gpt-3.5-turbo', messages: messages.value.map(m => ({ role: m.role === 'user' ? 'user' : m.role || 'assistant', content: m.content })) })
@@ -104,8 +110,10 @@ const handleSend = async (text) => {
         body: JSON.stringify({ message: text })
       }, 15000);
       attempts[attempts.length-1].status = resp.status;
-      const respText = await resp.text().catch(()=>'');
-      attempts[attempts.length-1].response = respText.slice(0,2000);
+      const respTextFull = await resp.text().catch(()=>'');
+      // keep full text for parsing, keep a truncated preview for logs
+      attempts[attempts.length-1].response = respTextFull;
+      attempts[attempts.length-1].responsePreview = respTextFull.slice(0,2000);
       console.log('Netlify function attempt:', attempts[attempts.length-1]);
 
       if (resp.status === 404) {
@@ -118,8 +126,9 @@ const handleSend = async (text) => {
             body: JSON.stringify({ message: text })
           }, 15000);
           attempts[attempts.length-1].status = resp.status;
-          const respText2 = await resp.text().catch(()=>'');
-          attempts[attempts.length-1].response = respText2.slice(0,2000);
+          const respText2Full = await resp.text().catch(()=>'');
+          attempts[attempts.length-1].response = respText2Full;
+          attempts[attempts.length-1].responsePreview = respText2Full.slice(0,2000);
           console.log('Netlify dev attempt:', attempts[attempts.length-1]);
         } catch (err) {
           attempts[attempts.length-1].error = String(err);
@@ -133,9 +142,44 @@ const handleSend = async (text) => {
       }
 
       const data = attempts[attempts.length-1].response ? JSON.parse(attempts[attempts.length-1].response) : null;
-      const reply = data?.reply || '';
+      const reply = data?.reply || data?.message || data?.msg || '';
+      // extract upstream usage if present in debug
+      try {
+        const dbg = data?._debug;
+        if (dbg && dbg.upstreamUsage) {
+          const usage = dbg.upstreamUsage;
+          // prefer completion_tokens then total_tokens
+          const used = usage.completion_tokens ?? usage.total_tokens ?? null;
+          const limit = dbg.model && /gpt-5|gpt-4o/i.test(dbg.model) ? (Number(import.meta.env.VITE_OPENAI_MAX_COMPLETION_TOKENS || 2000)) : (Number(import.meta.env.VITE_OPENAI_MAX_TOKENS || 2000));
+          tokenInfo.value = used != null ? { used, limit } : null;
+        } else {
+          tokenInfo.value = null;
+        }
+      } catch (e) { tokenInfo.value = null; }
+      // create a short preview (first two sections) for long replies
+      const makePreview = (text, maxSections = 2, maxListItems = 3) => {
+        if (!text) return text;
+        // If the text looks like a list (lines starting with '-' or numbering), show top list items
+        const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        const listLines = lines.filter(l => /^[-*]\s+/.test(l) || /^\d+\./.test(l));
+        if (listLines.length) {
+          const take = listLines.slice(0, maxListItems);
+          return take.join('\n') + (listLines.length > take.length ? '\n...': '');
+        }
+        // fallback to section-based preview
+        const sections = text.split(/\n\n+/).map(s=>s.trim()).filter(Boolean);
+        if (sections.length <= maxSections) return text;
+        return sections.slice(0, maxSections).join('\n\n') + '\n\n...';
+      };
+
+      const preview = makePreview(reply, 2);
       for (let i = messages.value.length - 1; i >= 0; i--) {
-        if (messages.value[i].role === 'bot') { messages.value[i].content = reply || '응답이 없습니다.'; break; }
+        if (messages.value[i].role === 'bot') {
+          messages.value[i].content = reply || '응답이 없습니다.';
+          if (preview && preview !== reply) messages.value[i].preview = preview;
+          else delete messages.value[i].preview;
+          break;
+        }
       }
 
       console.log('Netlify function success', attempts);
@@ -239,6 +283,14 @@ to{
 
     );
 
+}
+
+.chat-token{
+  padding:6px 12px;
+  font-size:12px;
+  color:#475569;
+  text-align:right;
+  padding-right:18px;
 }
 
 /* 스크롤 */

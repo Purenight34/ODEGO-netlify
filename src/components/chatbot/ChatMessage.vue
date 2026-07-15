@@ -3,30 +3,35 @@
 
     <div :class="['message', sender]">
 
-      <p class="text">
-        {{ message }}
-      </p>
+                <p class="text">
+                    {{ displayMessage }}
+                    <button v-if="hasFullToggle" class="toggle-btn" @click="toggleFull">{{ showFull ? '간략히' : '더보기' }}</button>
+                </p>
 
-    </div>
+      </div>
 
   </div>
 </template>
 
 <script setup>
 
-defineProps({
+import { ref, computed } from 'vue';
 
-  sender:{
-    type:String,
-    default:'bot'
-  },
+const props = defineProps({
+  sender: { type: String, default: 'bot' },
+  message: { type: String, required: true },
+  fullMessage: { type: String, default: null }
+});
 
-  message:{
-    type:String,
-    required:true
-  }
+const showFull = ref(false);
 
-})
+const hasFullToggle = computed(() => {
+  return typeof props.fullMessage === 'string' && props.fullMessage && props.fullMessage !== props.message;
+});
+
+const displayMessage = computed(() => (showFull.value && props.fullMessage) ? props.fullMessage : props.message);
+
+function toggleFull() { showFull.value = !showFull.value; }
 
 </script>
 
@@ -121,6 +126,23 @@ defineProps({
 
 }
 
+.toggle-btn{
+    background:transparent;
+    border:none;
+    color:#2D7FF9;
+    font-size:13px;
+    font-weight:600;
+    padding:0;
+    margin-left:8px;
+    cursor:pointer;
+    display:inline-block;
+    vertical-align:middle;
+}
+
+.message-row.user .toggle-btn{
+    color: rgba(255,255,255,0.95);
+}
+
 .message-row.user .text{
 
     margin:0;
@@ -151,6 +173,8 @@ from{
         translateY(10px);
 
 }
+
+
 
 to{
 

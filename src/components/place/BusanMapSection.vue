@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 //import busanMapBackground from '../../assets/images/BusanMap_0.png'
 import busanMapBackground from '../../assets/images/BusanMap_OSM.svg'
 

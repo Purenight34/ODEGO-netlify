@@ -9,6 +9,10 @@ defineProps({
   selectedPostId: {
     type: [Number, String, null],
     default: null
+  },
+  startNumber: {
+    type: Number,
+    default: 1
   }
 })
 
@@ -19,10 +23,10 @@ const emit = defineEmits(['select-post'])
   <section class="board-table">
     <div v-if="posts.length" class="rows">
       <BoardRow
-        v-for="post in posts"
+        v-for="(post, index) in posts"
         :key="post.id"
         :post="post"
-        :post-number="post.id"
+        :post-number="startNumber + index"
         :selected="post.id === selectedPostId"
         @select="emit('select-post', $event)"
       />

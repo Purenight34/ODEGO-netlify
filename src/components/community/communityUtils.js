@@ -3,7 +3,9 @@ export const STORAGE_KEY = 'community-posts-v1'
 export function normalizePost(post) {
   return {
     ...post,
-    comments: Array.isArray(post.comments) ? post.comments : [],
+    comments: Array.isArray(post.comments)
+      ? post.comments.map((comment, index) => normalizeComment(comment, index + 1))
+      : [],
     likes: Number(post.likes) || 0,
     views: Number(post.views) || 0,
     password: post.password || '',
@@ -98,20 +100,24 @@ export function addComment(posts, postId, commentPayload) {
       return post
     }
 
-    const comment = normalizeComment(commentPayload)
+    const comments = Array.isArray(post.comments) ? post.comments : []
+    const anonymousNumber = comments.length + 1
+    const comment = normalizeComment(commentPayload, anonymousNumber)
     return normalizePost({
       ...post,
-      comments: [...(post.comments || []), comment]
+      comments: [...comments, comment]
     })
   })
 }
 
-export function normalizeComment(commentPayload) {
+export function normalizeComment(commentPayload = {}, fallbackIndex = 1) {
+  const anonymousNumber = typeof commentPayload.anonymousNumber === 'number' ? commentPayload.anonymousNumber : fallbackIndex
+
   return {
-    id: Date.now(),
-    author: '익명',
+    id: commentPayload.id || Date.now(),
+    author: commentPayload.author || `익명 ${anonymousNumber}`,
     content: commentPayload.content,
-    createdAt: new Date().toISOString().slice(0, 10)
+    createdAt: commentPayload.createdAt || new Date().toISOString().slice(0, 10)
   }
 }
 

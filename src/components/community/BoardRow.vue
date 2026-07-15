@@ -32,7 +32,6 @@ const emit = defineEmits(['select'])
     <div class="col-category">
       <span class="category-badge">{{ post.category }}</span>
     </div>
-    <div class="col-date">{{ post.date }}</div>
     <div class="col-views">{{ post.views }}</div>
     <div class="col-likes">
       <span class="heart">♡</span>
@@ -44,7 +43,7 @@ const emit = defineEmits(['select'])
 <style scoped>
 .board-row {
   display: grid;
-  grid-template-columns: 0.8fr 3.2fr 1.2fr 1.2fr 0.8fr 0.8fr;
+  grid-template-columns: 60px minmax(0, 1fr) 90px 70px 70px;
   gap: 0.75rem;
   align-items: center;
   width: 100%;
@@ -65,11 +64,19 @@ const emit = defineEmits(['select'])
 }
 
 .col-number,
-.col-date,
 .col-views,
 .col-likes {
   color: #64748b;
   font-size: 0.9rem;
+  text-align: center;
+}
+
+.col-title {
+  min-width: 0;
+}
+
+.col-category {
+  text-align: center;
 }
 
 .col-likes {
@@ -137,9 +144,9 @@ p {
 
   .col-number,
   .col-category,
-  .col-date,
   .col-views,
   .col-likes {
     display: none;
   }
 }
+</style>

@@ -156,9 +156,9 @@ watch(
           <textarea :value="commentText" rows="3" placeholder="댓글을 입력해보세요" @input="emit('update:comment-text', $event.target.value)" />
           <button class="primary-button" @click="emit('add-comment')">댓글 작성</button>
           <ul v-if="post.comments?.length" class="comment-list">
-            <li v-for="comment in post.comments" :key="comment.id">
-              <strong>익명</strong>
-              <span>{{ comment.content }}</span>
+            <li v-for="comment in post.comments" :key="comment.id" class="comment-item">
+              <strong>{{ comment.author || '익명' }}</strong>
+              <span class="comment-content">{{ comment.content }}</span>
             </li>
           </ul>
         </div>
@@ -180,9 +180,6 @@ watch(
           />
           <button class="secondary-button compact" @click="verifyPassword">확인</button>
           <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
-        </div>
-        <div v-else class="password-hint">
-          <p>비밀번호 인증 후 수정과 삭제가 가능합니다.</p>
         </div>
       </aside>
     </div>
@@ -328,8 +325,7 @@ h4 {
   gap: 0.6rem;
 }
 
-.password-box,
-.password-hint {
+.password-box {
   padding: 0.85rem;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -380,12 +376,6 @@ h4 {
   font-size: 0.85rem;
 }
 
-.password-hint p {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
 label {
   display: flex;
   flex-direction: column;
@@ -412,9 +402,19 @@ textarea {
 .comment-list {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
   padding-left: 1rem;
   color: #475569;
+}
+
+.comment-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.comment-content {
+  color: #334155;
 }
 
 .empty-state {

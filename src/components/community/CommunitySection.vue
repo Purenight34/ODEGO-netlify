@@ -163,14 +163,6 @@ watch(searchTerm, () => {
 
 <template>
   <section class="community-shell">
-    <div class="banner-card">
-      <div>
-        <p class="eyebrow">Community</p>
-        <h1>부산 커뮤니티</h1>
-        <p class="banner-text">부산의 맛집, 여행지, 축제 정보를 익명으로 자유롭게 공유해요! 🌊</p>
-      </div>
-    </div>
-
     <div class="search-card">
       <select v-model="searchField" class="search-select">
         <option value="all">전체</option>
@@ -178,45 +170,33 @@ watch(searchTerm, () => {
         <option value="category">카테고리</option>
         <option value="content">내용</option>
       </select>
-      <div class="search-input-wrap">
-        <input v-model="searchTerm" type="text" placeholder="검색어를 입력하세요..." />
-        <button class="search-button" type="button">⌕</button>
-      </div>
+      <input v-model="searchTerm" type="text" placeholder="검색어를 입력하세요..." class="search-input" />
+      <button class="search-button" type="button">검색</button>
     </div>
 
-    <div class="tab-grid">
-      <button
-        v-for="tab in tabs"
-        :key="tab"
-        class="tab-button"
-        :class="{ active: activeTab === tab }"
-        @click="activeTab = tab"
-      >
-        {{ tab }}
+    <div class="board-head">
+      <h2>전체 게시글</h2>
+      <button class="write-button" @click="toggleCreateForm">
+        <span class="plus-icon">✎</span>
+        글쓰기
       </button>
     </div>
 
-    <CreatePostForm v-if="showCreateForm" class="create-form" @submit="handleCreatePost" />
-
     <div class="board-card">
-      <div class="board-card-header">
-        <h2>게시판 목록</h2>
-        <button class="write-button" @click="toggleCreateForm">
-          <span class="plus-icon">＋</span>
-          글쓰기
-        </button>
-      </div>
-
       <div class="table-header">
         <div class="col-number">번호</div>
         <div class="col-title">제목</div>
         <div class="col-category">구분</div>
-        <div class="col-date">작성일</div>
-        <div class="col-views">조회</div>
+        <div class="col-views">조회수</div>
         <div class="col-likes">좋아요</div>
       </div>
 
-      <BoardTable :posts="pagedPosts" :selected-post-id="selectedPostId" @select-post="selectPost" />
+      <BoardTable
+        :posts="pagedPosts"
+        :selected-post-id="selectedPostId"
+        :start-number="(currentPage - 1) * pageSize + 1"
+        @select-post="selectPost"
+      />
       <Pagination :current-page="currentPage" :total-pages="totalPages" @change-page="changePage" />
     </div>
 
@@ -238,6 +218,13 @@ watch(searchTerm, () => {
         @add-comment="addCommentToPost"
       />
     </div>
+
+    <div v-if="showCreateForm" class="modal-backdrop" @click.self="toggleCreateForm">
+      <div class="modal-card">
+        <h3>새 글 작성</h3>
+        <CreatePostForm @submit="handleCreatePost" />
+      </div>
+    </div>
   </section>
 </template>
 
@@ -250,34 +237,17 @@ watch(searchTerm, () => {
   background: #f8fafc;
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: 1rem;
 }
 
-.banner-card,
 .search-card,
 .board-card,
-.detail-card {
+.detail-card,
+.modal-card {
   background: white;
   border: 1px solid #e2e8f0;
-  border-radius: 28px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05);
-}
-
-.banner-card {
-  padding: 1.6rem 1.75rem;
-}
-
-.banner-card h1 {
-  margin: 0 0 0.35rem;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.banner-text {
-  margin: 0;
-  color: #64748b;
-  font-size: 0.96rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
 .search-card {
@@ -287,88 +257,41 @@ watch(searchTerm, () => {
 }
 
 .search-select,
-.search-input-wrap input {
-  width: 100%;
+.search-input {
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 0.8rem 1rem;
-  background: white;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  background: #f8fafc;
   font: inherit;
   color: #334155;
   outline: none;
 }
 
 .search-select {
-  width: 120px;
+  width: 110px;
 }
 
-.search-input-wrap {
-  position: relative;
+.search-input {
   flex: 1;
 }
 
-.search-input-wrap input {
-  padding-right: 3rem;
-}
-
-.search-input-wrap input:focus,
-.search-select:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
-}
-
 .search-button {
-  position: absolute;
-  top: 50%;
-  right: 0.75rem;
-  transform: translateY(-50%);
   border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #64748b;
-}
-
-.tab-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.6rem;
-  padding: 0 0.1rem;
-}
-
-.tab-button {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 0.7rem 0.8rem;
-  background: white;
-  color: #475569;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tab-button.active {
-  background: #2563eb;
-  border-color: #2563eb;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  background: #1f2937;
   color: white;
+  cursor: pointer;
 }
 
-.create-form {
-  margin: 0 0.2rem;
-}
-
-.board-card {
-  padding: 1rem 1.25rem 1.25rem;
-}
-
-.board-card-header {
+.board-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-top: 0.2rem;
 }
 
-.board-card-header h2 {
+.board-head h2 {
   margin: 0;
   color: #334155;
   font-size: 1.05rem;
@@ -380,49 +303,54 @@ watch(searchTerm, () => {
   align-items: center;
   gap: 0.4rem;
   border: none;
-  border-radius: 999px;
-  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
   background: #2563eb;
   color: white;
   font-weight: 600;
   cursor: pointer;
 }
 
-.plus-icon {
-  font-size: 1rem;
+.board-card {
+  padding: 1rem 1.25rem 1.25rem;
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 0.8fr 3.2fr 1.2fr 1.2fr 0.8fr 0.8fr;
+  grid-template-columns: 60px minmax(0, 1fr) 90px 70px 70px;
   gap: 0.75rem;
   padding: 0.8rem 0.3rem;
-  margin-bottom: 0.4rem;
   border-bottom: 1px solid #e2e8f0;
   color: #64748b;
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .detail-card {
-  padding: 1.1rem 1.25rem 1.25rem;
+  padding: 1rem 1.25rem 1.25rem;
 }
 
-.eyebrow {
-  margin: 0 0 0.3rem;
-  color: #64748b;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
 }
 
-@media (max-width: 900px) {
-  .tab-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.modal-card {
+  width: min(100%, 32rem);
+  padding: 1.25rem;
+}
+
+.modal-card h3 {
+  margin: 0 0 0.8rem;
+  color: #0f172a;
+  font-size: 1.2rem;
 }
 
 @media (max-width: 768px) {

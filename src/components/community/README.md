@@ -10,3 +10,4 @@
 - BoardRow: 게시글 한 줄
 - BoardDetail: 게시글 상세 보기
 - Pagination: 페이지네이션
+

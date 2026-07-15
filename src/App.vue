@@ -1,17 +1,25 @@
 <script setup>
+import Header from './components/layout/Header.vue'
+import HeroSection from './components/hero/HeroSection.vue'
 import CommunitySection from './components/community/CommunitySection.vue'
+import BusanMapSection from './components/place/BusanMapSection.vue'
 </script>
 
 <template>
   <main class="app-shell">
+    <Header />
+    <HeroSection />
     <CommunitySection />
+    <BusanMapSection />
   </main>
 </template>
 
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  padding: 2rem 1rem 3rem;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+  background: #ffffff;
+  display: grid;
+  gap: 3rem;
+  padding: 1.5rem 1.25rem 3rem;
 }
 </style>

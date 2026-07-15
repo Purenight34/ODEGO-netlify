@@ -1,5 +1,5 @@
 <template>
-  <section class="hero">
+  <section id="home" class="hero">
     <img :src="heroImage" alt="부산 여행 이미지" class="hero-image" />
     <div class="overlay">
       <div class="hero-content">

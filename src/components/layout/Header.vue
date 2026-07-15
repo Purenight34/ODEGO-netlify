@@ -1,21 +1,66 @@
 <template>
   <header class="header">
     <div class="container">
-      <a href="#" class="logo">
+      <a href="#home" class="logo">
         <span class="logo-icon">📍</span>
         <span class="logo-text">LocalHub</span>
       </a>
 
       <nav class="nav">
-        <a href="#" class="nav-item">홈</a>
-        <a href="#community" class="nav-item">커뮤니티</a>
-        <a href="#place" class="nav-item">추천 장소</a>
+        <a
+          v-for="item in navItems"
+          :key="item.id"
+          :href="`#${item.id}`"
+          class="nav-item"
+          :class="{ active: activeSection === item.id }"
+          @click="activeSection = item.id"
+        >
+          {{ item.label }}
+        </a>
       </nav>
     </div>
   </header>
 </template>
 
 <script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+
+const navItems = [
+  { id: 'home', label: '홈' },
+  { id: 'community', label: '커뮤니티' },
+  { id: 'place', label: '추천 장소' },
+]
+
+const activeSection = ref('home')
+let observer = null
+
+onMounted(() => {
+  const sectionIds = navItems.map((item) => item.id)
+  observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+
+      if (visible.length > 0) {
+        activeSection.value = visible[0].target.id
+      }
+    },
+    {
+      rootMargin: '-40% 0px -55% 0px',
+      threshold: 0.25,
+    },
+  )
+
+  sectionIds.forEach((id) => {
+    const section = document.getElementById(id)
+    if (section) observer.observe(section)
+  })
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+})
 </script>
 
 <style scoped>
@@ -129,6 +174,14 @@
 
     width:100%;
 
+}
+
+.nav-item.active {
+    color:#2D7FF9;
+}
+
+.nav-item.active::after {
+    width:100%;
 }
 
 /* Tablet */

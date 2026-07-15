@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
@@ -76,10 +76,24 @@ const selectedPlace = ref(null)
 const recommendedPlaces = ref([])
 const zoomLevel = ref(1)
 const mapBackgroundUrl = ref(busanMapBackground)
+const mapStageRef = ref(null)
+const mapStageWidth = ref(0)
+const mapStageHeight = ref(0)
+const panX = ref(0)
+const isDragging = ref(false)
+const activePointerId = ref(null)
+const dragStartX = ref(0)
+const dragStartY = ref(0)
+const panY = ref(0)
+const dragStartPanX = ref(0)
+const dragStartPanY = ref(0)
+let mapResizeObserver = null
 
-const zoomStep = 0.15
-const zoomMin = 0.85
-const zoomMax = 1.6
+const zoomStep = 0.5
+const zoomMin = 1
+const zoomMax = 4
+const mapLongitudeOffset = 0
+const mapLatitudeOffset = 0
 
 // This crop box should match the PNG export range used for BusanMap_0.
 const mapBounds = {
@@ -103,8 +117,10 @@ const mapPlaces = computed(() => {
 	const latitudeRange = maxLatitude - minLatitude || 1
 
 	return filteredPlaces.value.map((place) => {
-		const x = ((place.longitude - minLongitude) / longitudeRange) * 100
-		const y = 100 - ((place.latitude - minLatitude) / latitudeRange) * 100
+		const adjustedLongitude = place.longitude + mapLongitudeOffset
+		const adjustedLatitude = place.latitude + mapLatitudeOffset
+		const x = ((adjustedLongitude - minLongitude) / longitudeRange) * 100
+		const y = 100 - ((adjustedLatitude - minLatitude) / latitudeRange) * 100
 
 		return {
 			...place,
@@ -145,11 +161,101 @@ const resolvedMapPlaces = computed(() => {
 			}
 		})
 	})
+	})
+
+const maxPanX = computed(() => {
+	if (mapStageWidth.value <= 0 || zoomLevel.value <= 1) {
+		return 0
+	}
+
+	return ((mapStageWidth.value * zoomLevel.value) - mapStageWidth.value) / 2
+})
+
+const maxPanY = computed(() => {
+	if (mapStageHeight.value <= 0 || zoomLevel.value <= 1) {
+		return 0
+	}
+
+	return ((mapStageHeight.value * zoomLevel.value) - mapStageHeight.value) / 2
+})
+
+function clampPanX(value) {
+	return Math.min(maxPanX.value, Math.max(-maxPanX.value, value))
+}
+
+function clampPanY(value) {
+	return Math.min(maxPanY.value, Math.max(-maxPanY.value, value))
+}
 
 const mapViewportStyle = computed(() => ({
 	'--zoom-level': String(zoomLevel.value),
+	'--pan-x': `${panX.value}px`,
+	'--pan-y': `${panY.value}px`,
 }))
-})
+
+function updateMapStageWidth() {
+	if (!mapStageRef.value) {
+		mapStageWidth.value = 0
+		return
+	}
+
+	mapStageWidth.value = mapStageRef.value.getBoundingClientRect().width
+	mapStageHeight.value = mapStageRef.value.getBoundingClientRect().height
+	panX.value = clampPanX(panX.value)
+	panY.value = clampPanY(panY.value)
+}
+
+function beginMapPan(event) {
+	if (zoomLevel.value <= 1) {
+		return
+	}
+
+	if (event.button !== 0) {
+		return
+	}
+
+	if (event.target.closest('.map-marker')) {
+		return
+	}
+
+	isDragging.value = true
+	activePointerId.value = event.pointerId
+	dragStartX.value = event.clientX
+	dragStartY.value = event.clientY
+	dragStartPanX.value = panX.value
+	dragStartPanY.value = panY.value
+	event.preventDefault()
+	window.addEventListener('pointermove', moveMapPan)
+	window.addEventListener('pointerup', endMapPan)
+	window.addEventListener('pointercancel', endMapPan)
+}
+
+function stopMapPanListeners() {
+	window.removeEventListener('pointermove', moveMapPan)
+	window.removeEventListener('pointerup', endMapPan)
+	window.removeEventListener('pointercancel', endMapPan)
+}
+
+function moveMapPan(event) {
+	if (!isDragging.value || event.pointerId !== activePointerId.value) {
+		return
+	}
+
+	const deltaX = event.clientX - dragStartX.value
+	const deltaY = event.clientY - dragStartY.value
+	panX.value = clampPanX(dragStartPanX.value + deltaX)
+	panY.value = clampPanY(dragStartPanY.value + deltaY)
+}
+
+function endMapPan(event) {
+	if (!isDragging.value || event.pointerId !== activePointerId.value) {
+		return
+	}
+
+	isDragging.value = false
+	activePointerId.value = null
+	stopMapPanListeners()
+}
 
 function pickRandomPlaces(pool, count) {
 	const shuffled = [...pool].sort(() => Math.random() - 0.5)
@@ -182,7 +288,37 @@ function zoomOut() {
 
 function resetZoom() {
 	zoomLevel.value = 1
+	panX.value = 0
+	panY.value = 0
 }
+
+watch(zoomLevel, (nextZoomLevel) => {
+	if (nextZoomLevel <= 1) {
+		panX.value = 0
+		panY.value = 0
+		return
+	}
+
+	panX.value = clampPanX(panX.value)
+	panY.value = clampPanY(panY.value)
+})
+
+onMounted(() => {
+	updateMapStageWidth()
+
+	if (typeof ResizeObserver !== 'undefined' && mapStageRef.value) {
+		mapResizeObserver = new ResizeObserver(() => {
+			updateMapStageWidth()
+		})
+
+		mapResizeObserver.observe(mapStageRef.value)
+	}
+})
+
+onBeforeUnmount(() => {
+	stopMapPanListeners()
+	mapResizeObserver?.disconnect()
+})
 
 const mapBackgroundStyle = computed(() => {
 	return mapBackgroundUrl.value
@@ -235,7 +371,14 @@ const mapBackgroundStyle = computed(() => {
 					</div>
 				</div>
 
-				<div class="map-stage" aria-label="부산 장소 시각화 지도">
+				<div
+					ref="mapStageRef"
+					class="map-stage"
+					:class="{ 'is-zoomed': zoomLevel > 1, 'is-dragging': isDragging }"
+					aria-label="부산 장소 시각화 지도"
+					@pointerdown="beginMapPan"
+					@dragstart.prevent
+				>
 					<div class="map-viewport" :style="mapViewportStyle">
 						<div class="map-background" :style="mapBackgroundStyle"></div>
 						<div class="map-background-overlay"></div>
@@ -416,10 +559,6 @@ const mapBackgroundStyle = computed(() => {
 	transform: translateY(-1px);
 }
 
-.map-marker:hover {
-	transform: translate(-50%, -50%);
-}
-
 .content-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr);
@@ -499,6 +638,17 @@ const mapBackgroundStyle = computed(() => {
 	overflow: hidden;
 	background: #ffffff;
 	border: 1px solid rgba(15, 23, 42, 0.08);
+	touch-action: none;
+	user-select: none;
+	cursor: grab;
+}
+
+.map-stage.is-dragging {
+	cursor: grabbing;
+}
+
+.map-stage.is-dragging .map-viewport {
+	transition: none;
 }
 
 .map-viewport {
@@ -507,7 +657,7 @@ const mapBackgroundStyle = computed(() => {
 	left: 50%;
 	width: calc(100% * var(--zoom-level, 1));
 	height: calc(100% * var(--zoom-level, 1));
-	transform: translate(-50%, -50%);
+	transform: translate(calc(-50% + var(--pan-x, 0px)), calc(-50% + var(--pan-y, 0px)));
 	transform-origin: center center;
 	transition: width 0.2s ease, height 0.2s ease, transform 0.2s ease;
 }
@@ -562,23 +712,6 @@ const mapBackgroundStyle = computed(() => {
 	left: 8%;
 }
 
-.map-label {
-	position: absolute;
-	z-index: 1;
-	padding: 0.4rem 0.7rem;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.86);
-	color: #475569;
-	font-size: 0.78rem;
-	font-weight: 700;
-	box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-}
-
-.map-label-top { top: 16px; left: 50%; transform: translateX(-50%); }
-.map-label-right { top: 50%; right: 16px; transform: translateY(-50%); }
-.map-label-bottom { bottom: 16px; left: 50%; transform: translateX(-50%); }
-.map-label-left { top: 50%; left: 16px; transform: translateY(-50%); }
-
 .map-marker {
 	position: absolute;
 	z-index: 2;
@@ -589,18 +722,18 @@ const mapBackgroundStyle = computed(() => {
 
 .marker-dot {
 	display: inline-flex;
-	width: 18px;
-	height: 18px;
+	width: 14px;
+	height: 14px;
 	border-radius: 50%;
 	background: var(--marker-color, #2563eb);
-	box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.75), 0 10px 24px rgba(15, 23, 42, 0.18);
+	box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.78), 0 8px 18px rgba(15, 23, 42, 0.16);
 	position: relative;
 }
 
 .marker-dot::after {
 	content: '';
 	position: absolute;
-	inset: -7px;
+	inset: -5px;
 	border-radius: 50%;
 	border: 2px solid rgba(255, 255, 255, 0.9);
 }

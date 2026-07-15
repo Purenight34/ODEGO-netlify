@@ -31,7 +31,7 @@ defineEmits(["click"]);
 
   border:none;
 
-  border-radius:22px;
+  border-radius:50%;
 
   background:linear-gradient(
       135deg,
@@ -85,25 +85,7 @@ defineEmits(["click"]);
 
 }
 
-.badge{
 
-  position:absolute;
-
-  top:10px;
-
-  right:10px;
-
-  width:10px;
-
-  height:10px;
-
-  border-radius:50%;
-
-  background:#34D399;
-
-  border:2px solid white;
-
-}
 
 @media(max-width:768px){
 
@@ -117,7 +99,7 @@ defineEmits(["click"]);
 
   bottom:18px;
 
-  border-radius:18px;
+  border-radius:50%;
 
 }
 

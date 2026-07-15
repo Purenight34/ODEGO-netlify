@@ -29,6 +29,7 @@ const editingPostId = ref(null)
 const passwordInput = ref('')
 const passwordError = ref('')
 const commentText = ref('')
+const authenticatedPostId = ref(null)
 
 const tabs = ['전체', '맛집', '여행지', '축제', '카페', '기타']
 
@@ -61,6 +62,8 @@ const selectedPost = computed(() => {
 
 function selectPost(postId) {
   selectedPostId.value = postId
+  authenticatedPostId.value = null
+  editingPostId.value = null
   passwordError.value = ''
   passwordInput.value = ''
   commentText.value = ''
@@ -85,15 +88,22 @@ function handleCreatePost(payload) {
 function toggleCreateForm() {
   showCreateForm.value = !showCreateForm.value
   editingPostId.value = null
+  authenticatedPostId.value = null
   passwordError.value = ''
+  passwordInput.value = ''
 }
 
 function openEditMode() {
-  editingPostId.value = selectedPost.value?.id ?? null
+  if (!selectedPost.value) return
+  if (authenticatedPostId.value !== selectedPost.value.id) {
+    passwordError.value = '먼저 수정/삭제 인증을 진행해주세요.'
+    return
+  }
+  editingPostId.value = selectedPost.value.id
 }
 
 function submitEdit(payload) {
-  if (!selectedPost.value) return
+  if (!selectedPost.value || authenticatedPostId.value !== selectedPost.value.id) return
   posts.value = updatePostEntry(posts.value, selectedPost.value.id, payload)
   savePosts(posts.value)
   editingPostId.value = null
@@ -102,12 +112,19 @@ function submitEdit(payload) {
 function deletePost(postId) {
   const target = posts.value.find((post) => post.id === postId)
   if (!target) return
+  if (authenticatedPostId.value !== postId) {
+    passwordError.value = '먼저 수정/삭제 인증을 진행해주세요.'
+    return
+  }
 
   const confirmed = window.confirm('정말로 이 글을 삭제하시겠습니까?')
   if (!confirmed) return
 
   posts.value = deletePostEntry(posts.value, postId)
   savePosts(posts.value)
+  authenticatedPostId.value = null
+  passwordInput.value = ''
+  passwordError.value = ''
   if (selectedPostId.value === postId) {
     selectedPostId.value = posts.value[0]?.id ?? null
   }
@@ -135,7 +152,8 @@ function verifyPassword(postId) {
   }
 
   passwordError.value = ''
-  deletePost(postId)
+  passwordInput.value = ''
+  authenticatedPostId.value = postId
 }
 
 watch(searchTerm, () => {
@@ -196,6 +214,7 @@ watch(searchTerm, () => {
       :password-input="passwordInput"
       :password-error="passwordError"
       :comment-text="commentText"
+      :is-authenticated="authenticatedPostId === selectedPost?.id"
       @like-post="likePost"
       @delete-post="deletePost"
       @edit-post="openEditMode"

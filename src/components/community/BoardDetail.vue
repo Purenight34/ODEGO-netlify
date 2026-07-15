@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   post: {
@@ -21,6 +21,10 @@ const props = defineProps({
   commentText: {
     type: String,
     default: ''
+  },
+  isAuthenticated: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -39,6 +43,7 @@ const editForm = reactive({
   title: '',
   content: ''
 })
+const isPasswordMode = ref(false)
 
 function likePost() {
   if (props.post) {
@@ -70,6 +75,11 @@ function verifyPassword() {
   }
 }
 
+function openPasswordMode() {
+  isPasswordMode.value = true
+  emit('update:password-input', '')
+}
+
 watch(
   () => props.post,
   (value) => {
@@ -77,8 +87,19 @@ watch(
       editForm.title = value.title
       editForm.content = value.content
     }
+    isPasswordMode.value = false
   },
   { immediate: true }
+)
+
+watch(
+  () => props.isAuthenticated,
+  (value) => {
+    if (value) {
+      isPasswordMode.value = false
+      emit('update:password-input', '')
+    }
+  }
 )
 </script>
 
@@ -119,15 +140,28 @@ watch(
     <div class="detail-footer">
       <div class="action-group">
         <button class="like-button" @click="likePost">❤️ {{ post.likes }}</button>
-        <button class="secondary-button" @click="editPost">수정</button>
-        <button class="secondary-button danger" @click="deletePost">삭제</button>
+        <button v-if="!isAuthenticated && !isPasswordMode" class="auth-link" @click="openPasswordMode">수정/삭제 인증</button>
+        <template v-else-if="isAuthenticated">
+          <button class="secondary-button" @click="editPost">수정</button>
+          <button class="secondary-button danger" @click="deletePost">삭제</button>
+        </template>
       </div>
       <span>조회수 {{ post.views }}</span>
     </div>
 
-    <div class="password-box">
-      <p class="password-title">글 수정/삭제</p>
-      <input :value="passwordInput" placeholder="비밀번호" @input="emit('update:password-input', $event.target.value)" />
+    <div v-if="isPasswordMode" class="password-box">
+      <div class="password-head">
+        <p class="password-title">글 수정/삭제</p>
+        <button class="icon-button" type="button" @click="isPasswordMode = false">✕</button>
+      </div>
+      <input
+        :value="passwordInput"
+        type="number"
+        inputmode="numeric"
+        placeholder="비밀번호 (숫자)"
+        @input="emit('update:password-input', $event.target.value.slice(0, 4))"
+        class="password-input"
+      />
       <button class="secondary-button compact" @click="verifyPassword">확인</button>
       <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
     </div>
@@ -260,6 +294,15 @@ h4 {
   color: #dc2626;
 }
 
+.auth-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #64748b;
+  font: inherit;
+  cursor: pointer;
+}
+
 .edit-form,
 .password-box,
 .comment-box {
@@ -278,6 +321,14 @@ h4 {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
+.password-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
 .password-title {
   margin: 0;
   font-size: 0.72rem;
@@ -286,10 +337,25 @@ h4 {
   text-transform: uppercase;
 }
 
+.icon-button {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
 .password-box input {
   height: 2rem;
   padding: 0 0.7rem;
   font-size: 0.9rem;
+  appearance: textfield;
+}
+
+.password-box input::-webkit-outer-spin-button,
+.password-box input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .password-box .compact {

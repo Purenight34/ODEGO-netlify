@@ -19,12 +19,12 @@ const sourceMap = {
 	},
 	course: {
 		label: '여행코스',
-		color: '#0f766e',
+		color: '#2563eb',
 		dataset: courseRaw.items ?? [],
 	},
 	festival: {
 		label: '축제공연행사',
-		color: '#d97706',
+		color: '#2563eb',
 		dataset: festivalRaw.items ?? [],
 	},
 }
@@ -61,6 +61,11 @@ const allPlaces = computed(() => {
 const activeCategory = ref('all')
 const selectedPlace = ref(null)
 const recommendedPlaces = ref([])
+const zoomLevel = ref(1)
+
+const zoomStep = 0.15
+const zoomMin = 0.85
+const zoomMax = 1.6
 
 const filteredPlaces = computed(() => {
 	if (activeCategory.value === 'all') {
@@ -113,6 +118,39 @@ const mapPlaces = computed(() => {
 	})
 })
 
+const resolvedMapPlaces = computed(() => {
+	const buckets = new Map()
+
+	for (const place of mapPlaces.value) {
+		const bucketKey = `${place.x.toFixed(1)}-${place.y.toFixed(1)}`
+		if (!buckets.has(bucketKey)) {
+			buckets.set(bucketKey, [])
+		}
+
+		buckets.get(bucketKey).push(place)
+	}
+
+	return Array.from(buckets.values()).flatMap((places) => {
+		if (places.length === 1) {
+			return places
+		}
+
+		const spreadRadius = Math.min(8, 2.2 + places.length * 0.55)
+
+		return places.map((place, index) => {
+			const angle = (Math.PI * 2 * index) / places.length
+			const offsetX = Math.cos(angle) * spreadRadius
+			const offsetY = Math.sin(angle) * spreadRadius
+
+			return {
+				...place,
+				x: Math.min(95, Math.max(5, place.x + offsetX)),
+				y: Math.min(95, Math.max(5, place.y + offsetY)),
+			}
+		})
+	})
+})
+
 function pickRandomPlaces(pool, count) {
 	const shuffled = [...pool].sort(() => Math.random() - 0.5)
 	return shuffled.slice(0, Math.min(count, shuffled.length))
@@ -132,6 +170,18 @@ function setCategory(categoryKey) {
 
 function selectPlace(place) {
 	selectedPlace.value = place
+}
+
+function zoomIn() {
+	zoomLevel.value = Math.min(zoomMax, Number((zoomLevel.value + zoomStep).toFixed(2)))
+}
+
+function zoomOut() {
+	zoomLevel.value = Math.max(zoomMin, Number((zoomLevel.value - zoomStep).toFixed(2)))
+}
+
+function resetZoom() {
+	zoomLevel.value = 1
 }
 </script>
 
@@ -165,21 +215,31 @@ function selectPlace(place) {
 			<article class="map-panel">
 				<div class="map-topline">
 					<span class="map-title">부산 지도 시각화</span>
-					<span class="map-count">{{ mapPlaces.length }}개 장소</span>
+					<div class="map-controls">
+						<span class="map-count">{{ resolvedMapPlaces.length }}개 장소</span>
+						<div class="zoom-controls" aria-label="지도 확대 축소">
+							<button type="button" class="zoom-button" @click="zoomOut">-</button>
+							<button type="button" class="zoom-button zoom-reset" @click="resetZoom">
+								{{ Math.round(zoomLevel * 100) }}%
+							</button>
+							<button type="button" class="zoom-button" @click="zoomIn">+</button>
+						</div>
+					</div>
 				</div>
 
 				<div class="map-stage" aria-label="부산 장소 시각화 지도">
-					<div class="map-grid"></div>
-					<div class="map-glow map-glow-a"></div>
-					<div class="map-glow map-glow-b"></div>
+					<div
+						class="map-canvas"
+						:style="{
+							transform: `translate(-50%, -50%) scale(${zoomLevel})`,
+						}"
+					>
+						<div class="map-grid"></div>
+						<div class="map-glow map-glow-a"></div>
+						<div class="map-glow map-glow-b"></div>
 
-					<div class="map-label map-label-top">북쪽</div>
-					<div class="map-label map-label-right">동쪽</div>
-					<div class="map-label map-label-bottom">남쪽</div>
-					<div class="map-label map-label-left">서쪽</div>
-
-					<button
-						v-for="place in mapPlaces"
+						<button
+							v-for="place in resolvedMapPlaces"
 						:key="place.id"
 						type="button"
 						class="map-marker"
@@ -194,10 +254,11 @@ function selectPlace(place) {
 					>
 						<span class="marker-dot"></span>
 						<span class="marker-tooltip">{{ place.title }}</span>
-					</button>
+						</button>
 
-					<div v-if="mapPlaces.length === 0" class="empty-state">
+						<div v-if="resolvedMapPlaces.length === 0" class="empty-state">
 						좌표가 있는 장소가 없습니다.
+						</div>
 					</div>
 				</div>
 
@@ -267,10 +328,7 @@ function selectPlace(place) {
 	margin: 40px auto;
 	padding: 28px;
 	border-radius: 28px;
-	background:
-		radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 30%),
-		radial-gradient(circle at bottom right, rgba(217, 119, 6, 0.16), transparent 28%),
-		linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+	background: #ffffff;
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
 }
@@ -323,7 +381,8 @@ function selectPlace(place) {
 	gap: 12px;
 	padding: 14px 16px;
 	border-radius: 18px;
-	background: #eef4ff;
+	background: #ffffff;
+	border: 1px solid rgba(37, 99, 235, 0.18);
 	color: #1e293b;
 	transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
@@ -337,7 +396,8 @@ function selectPlace(place) {
 }
 
 .category-button.active {
-	background: linear-gradient(135deg, #2563eb, #0f766e);
+	background: #2563eb;
+	border-color: #2563eb;
 	color: white;
 	box-shadow: 0 14px 26px rgba(37, 99, 235, 0.22);
 }
@@ -358,7 +418,7 @@ function selectPlace(place) {
 .map-panel,
 .recommend-panel {
 	border-radius: 24px;
-	background: rgba(255, 255, 255, 0.82);
+	background: #ffffff;
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	overflow: hidden;
 }
@@ -373,6 +433,41 @@ function selectPlace(place) {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
+}
+
+.map-controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.zoom-controls {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px;
+	border-radius: 999px;
+	border: 1px solid rgba(37, 99, 235, 0.18);
+	background: #ffffff;
+}
+
+.zoom-button {
+	min-width: 36px;
+	height: 36px;
+	padding: 0 10px;
+	border-radius: 999px;
+	border: 0;
+	background: #2563eb;
+	color: #ffffff;
+	font-size: 1rem;
+	font-weight: 700;
+	box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+}
+
+.zoom-reset {
+	min-width: 66px;
+	font-size: 0.8rem;
 }
 
 .map-title,
@@ -391,11 +486,18 @@ function selectPlace(place) {
 	min-height: 620px;
 	border-radius: 24px;
 	overflow: hidden;
-	background:
-		linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 28%),
-		linear-gradient(225deg, rgba(15, 118, 110, 0.08), transparent 30%),
-		radial-gradient(circle at center, rgba(255, 255, 255, 0.72), rgba(238, 244, 255, 0.96));
+	background: #ffffff;
 	border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.map-canvas {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 100%;
+	height: 100%;
+	transform-origin: center center;
+	transition: transform 0.2s ease;
 }
 
 .map-grid {
@@ -418,7 +520,7 @@ function selectPlace(place) {
 .map-glow-a {
 	width: 260px;
 	height: 260px;
-	background: rgba(37, 99, 235, 0.28);
+	background: rgba(37, 99, 235, 0.12);
 	top: 6%;
 	right: 10%;
 }
@@ -426,7 +528,7 @@ function selectPlace(place) {
 .map-glow-b {
 	width: 240px;
 	height: 240px;
-	background: rgba(217, 119, 6, 0.24);
+	background: rgba(37, 99, 235, 0.1);
 	bottom: 10%;
 	left: 8%;
 }
@@ -575,10 +677,10 @@ function selectPlace(place) {
 .refresh-button {
 	padding: 0.7rem 1rem;
 	border-radius: 14px;
-	background: linear-gradient(135deg, #0f766e, #2563eb);
+	background: #2563eb;
 	color: white;
 	font-weight: 700;
-	box-shadow: 0 12px 24px rgba(15, 118, 110, 0.22);
+	box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
 }
 
 .recommend-list {

@@ -3,11 +3,15 @@
 
     <ChatHeader @close="$emit('close')" />
 
-    <div class="chat-token" v-if="tokenInfo">
-      토큰: {{ tokenInfo.used }} / {{ tokenInfo.limit }}
-    </div>
+    <div class="chat-body" ref="chatBody">
 
-    <div class="chat-body">
+      <!-- 초기 진입 시 상단에 노출되는 추천 질문 -->
+      <div class="quick-menu top">
+        <button @click="handleSend('부산 여행코스')">부산 여행코스</button>
+        <button @click="handleSend('부산 관광지')">부산 관광지</button>
+        <button @click="handleSend('축제 정보')">축제 정보</button>
+      </div>
+
 
       <ChatMessage
         v-for="(m, i) in messages"
@@ -17,18 +21,6 @@
         :fullMessage="m.content"
       />
 
-      <!-- 추천 질문 -->
-
-      <div class="quick-menu">
-
-        <button @click="handleSend('부산 여행코스')">부산 여행코스</button>
-
-        <button @click="handleSend('부산 관광지')">부산 관광지</button>
-
-        <button @click="handleSend('축제 정보')">축제 정보</button>
-
-      </div>
-
     </div>
 
     <ChatInput @send="handleSend" />
@@ -37,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 import ChatHeader from './ChatHeader.vue';
 import ChatMessage from './ChatMessage.vue';
 import ChatInput from './ChatInput.vue';
@@ -49,6 +41,29 @@ const messages = ref([
   { role: 'bot', content: 'LocalHub AI입니다.' },
   { role: 'bot', content: '부산 여행에 대해 무엇이든 물어보세요.' }
 ]);
+
+const hasUserMessages = computed(() => messages.value.some(m => m.role === 'user'));
+
+// auto-scroll support
+const chatBody = ref(null);
+function scrollToBottom(smooth = true) {
+  const el = chatBody.value;
+  if (!el) return;
+  try {
+    if (smooth && 'scrollTo' in el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    else el.scrollTop = el.scrollHeight;
+  } catch (e) { el.scrollTop = el.scrollHeight; }
+}
+
+watch(messages, async () => {
+  await nextTick();
+  // ensure scroll after nested content updates (e.g. replacing bot.content)
+  scrollToBottom(true);
+}, { deep: true });
+
+onMounted(() => {
+  nextTick(() => scrollToBottom(false));
+});
 
 const loading = ref(false);
 const tokenInfo = ref(null); // { used: number, limit: number }
@@ -285,13 +300,7 @@ to{
 
 }
 
-.chat-token{
-  padding:6px 12px;
-  font-size:12px;
-  color:#475569;
-  text-align:right;
-  padding-right:18px;
-}
+/* token display removed */
 
 /* 스크롤 */
 
@@ -312,17 +321,18 @@ to{
 /* 추천 질문 */
 
 .quick-menu{
+  display:flex;
+  gap:10px;
+  margin:0;
+  background:transparent;
+  padding:12px 15px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
 
-    display:flex;
-
-    gap:10px;
-
-    margin:18px 0 18px;
-
-    overflow-x:auto;
-
-    scrollbar-width:none;
-
+.quick-menu.top{
+  margin-bottom:12px;
+  position:relative;
 }
 
 .quick-menu::-webkit-scrollbar{
@@ -358,8 +368,23 @@ to{
 }
 
 .quick-menu button:hover{
+  background:rgba(237,245,255,0.35);
+}
 
-    background:#EDF5FF;
+.quick-menu.fixed{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:88px; /* sits above the input area */
+  border-top:1px solid rgba(238,243,250,0.6);
+  background: transparent;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  padding:12px 15px;
+}
 
+.chat-window > .quick-menu.fixed{
+  flex-shrink:0;
 }
 </style>

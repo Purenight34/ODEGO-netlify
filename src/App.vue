@@ -3,7 +3,7 @@ import Header from './components/layout/Header.vue'
 import HeroSection from './components/hero/HeroSection.vue'
 import CommunitySection from './components/community/CommunitySection.vue'
 import BusanMapSection from './components/place/BusanMapSection.vue'
-import ChatbotWidget from './components/chat/ChatbotWidget.vue'
+import Chatbot from './components/chatbot/Chatbot.vue'
 </script>
 
 <template>
@@ -12,7 +12,7 @@ import ChatbotWidget from './components/chat/ChatbotWidget.vue'
     <HeroSection />
     <CommunitySection />
     <BusanMapSection />
-    <ChatbotWidget />
+    <Chatbot />
   </main>
 </template>
 

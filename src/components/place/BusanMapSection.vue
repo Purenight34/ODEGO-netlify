@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
+import busanMapBackground from '../../assets/images/BusanMap_0.png'
 
 const categoryList = [
 	{ key: 'all', label: '전체' },
@@ -34,6 +35,17 @@ function normalizePlaces(sourceKey, dataset) {
 		.map((item) => {
 			const longitude = Number(item.mapx)
 			const latitude = Number(item.mapy)
+			const extraInfo =
+				sourceKey === 'festival'
+					? {
+						period:
+							item.eventstartdate && item.eventenddate
+								? `${item.eventstartdate} ~ ${item.eventenddate}`
+								: '',
+						venue: item.eventplace || '',
+						playtime: item.playtime || '',
+					}
+					: {}
 
 			return {
 				id: `${sourceKey}-${item.contentid}`,
@@ -44,6 +56,7 @@ function normalizePlaces(sourceKey, dataset) {
 				image: item.firstimage2 || item.firstimage || '',
 				address: item.addr1 || '주소 정보 없음',
 				tel: item.tel || '',
+				extraInfo,
 				contentTypeId: item.contenttypeid || '',
 				longitude,
 				latitude,
@@ -62,6 +75,7 @@ const activeCategory = ref('all')
 const selectedPlace = ref(null)
 const recommendedPlaces = ref([])
 const zoomLevel = ref(1)
+const mapBackgroundUrl = ref(busanMapBackground)
 
 const zoomStep = 0.15
 const zoomMin = 0.85
@@ -183,6 +197,14 @@ function zoomOut() {
 function resetZoom() {
 	zoomLevel.value = 1
 }
+
+const mapBackgroundStyle = computed(() => {
+	return mapBackgroundUrl.value
+		? {
+			backgroundImage: `url(${mapBackgroundUrl.value})`,
+		}
+		: {}
+})
 </script>
 
 <template>
@@ -228,6 +250,8 @@ function resetZoom() {
 				</div>
 
 				<div class="map-stage" aria-label="부산 장소 시각화 지도">
+					<div class="map-background" :style="mapBackgroundStyle"></div>
+					<div class="map-background-overlay"></div>
 					<div
 						class="map-canvas"
 						:style="{
@@ -273,6 +297,9 @@ function resetZoom() {
 						<h3>{{ selectedPlace.title }}</h3>
 						<p>{{ selectedPlace.address }}</p>
 						<p v-if="selectedPlace.tel">{{ selectedPlace.tel }}</p>
+						<p v-if="selectedPlace.extraInfo?.venue">{{ selectedPlace.extraInfo.venue }}</p>
+						<p v-if="selectedPlace.extraInfo?.period">{{ selectedPlace.extraInfo.period }}</p>
+						<p v-if="selectedPlace.extraInfo?.playtime">{{ selectedPlace.extraInfo.playtime }}</p>
 					</div>
 				</div>
 			</article>
@@ -488,6 +515,23 @@ function resetZoom() {
 	overflow: hidden;
 	background: #ffffff;
 	border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.map-background {
+	position: absolute;
+	inset: 0;
+	background-color: #ffffff;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: contain;
+	opacity: 1;
+}
+
+.map-background-overlay {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08));
+	pointer-events: none;
 }
 
 .map-canvas {

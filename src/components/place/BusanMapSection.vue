@@ -1,9 +1,11 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
-import busanMapBackground from '../../assets/images/BusanMap_0.png'
 
 const categoryList = [
 	{ key: 'all', label: '전체' },
@@ -20,31 +22,35 @@ const sourceMap = {
 	},
 	course: {
 		label: '여행코스',
-		color: '#2563eb',
+		color: '#16a34a',
 		dataset: courseRaw.items ?? [],
 	},
 	festival: {
 		label: '축제공연행사',
-		color: '#2563eb',
+		color: '#dc2626',
 		dataset: festivalRaw.items ?? [],
 	},
 }
 
+/**
+ * 관광공사 JSON 데이터를 지도에서 사용하기 편한 공통 형태로 변환한다.
+ */
 function normalizePlaces(sourceKey, dataset) {
 	return dataset
 		.map((item) => {
 			const longitude = Number(item.mapx)
 			const latitude = Number(item.mapy)
+
 			const extraInfo =
 				sourceKey === 'festival'
 					? {
-						period:
-							item.eventstartdate && item.eventenddate
-								? `${item.eventstartdate} ~ ${item.eventenddate}`
-								: '',
-						venue: item.eventplace || '',
-						playtime: item.playtime || '',
-					}
+							period:
+								item.eventstartdate && item.eventenddate
+									? `${item.eventstartdate} ~ ${item.eventenddate}`
+									: '',
+							venue: item.eventplace || '',
+							playtime: item.playtime || '',
+						}
 					: {}
 
 			return {
@@ -62,7 +68,11 @@ function normalizePlaces(sourceKey, dataset) {
 				latitude,
 			}
 		})
-		.filter((item) => Number.isFinite(item.longitude) && Number.isFinite(item.latitude))
+		.filter(
+			(item) =>
+				Number.isFinite(item.longitude) &&
+				Number.isFinite(item.latitude),
+		)
 }
 
 const allPlaces = computed(() => {
@@ -74,201 +84,168 @@ const allPlaces = computed(() => {
 const activeCategory = ref('all')
 const selectedPlace = ref(null)
 const recommendedPlaces = ref([])
-const zoomLevel = ref(1)
-const mapBackgroundUrl = ref(busanMapBackground)
-const mapStageRef = ref(null)
-const mapStageWidth = ref(0)
-const mapStageHeight = ref(0)
-const panX = ref(0)
-const isDragging = ref(false)
-const activePointerId = ref(null)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
-const panY = ref(0)
-const dragStartPanX = ref(0)
-const dragStartPanY = ref(0)
-let mapResizeObserver = null
 
-const zoomStep = 0.5
-const zoomMin = 1
-const zoomMax = 4
-const mapLongitudeOffset = 0
-const mapLatitudeOffset = 0
-
-// This crop box should match the PNG export range used for BusanMap_0.
-const mapBounds = {
-	minLongitude: 128.82550074486798,
-	maxLongitude: 129.26286949222606,
-	minLatitude: 35.01196537305377,
-	maxLatitude: 35.350877484127,
+/**
+ * 이전에 사용한 부산 표시 범위.
+ * 배열에서는 [위도, 경도] 순서를 사용한다.
+ */
+const busanMapBounds = {
+	west: 128.8,
+	east: 129.29,
+	south: 34.98,
+	north: 35.385,
 }
+
+const leafletBounds = [
+	[busanMapBounds.south, busanMapBounds.west],
+	[busanMapBounds.north, busanMapBounds.east],
+]
 
 const filteredPlaces = computed(() => {
 	if (activeCategory.value === 'all') {
 		return allPlaces.value
 	}
 
-	return allPlaces.value.filter((place) => place.sourceKey === activeCategory.value)
+	return allPlaces.value.filter(
+		(place) => place.sourceKey === activeCategory.value,
+	)
 })
 
-const mapPlaces = computed(() => {
-	const { minLongitude, maxLongitude, minLatitude, maxLatitude } = mapBounds
-	const longitudeRange = maxLongitude - minLongitude || 1
-	const latitudeRange = maxLatitude - minLatitude || 1
+function isInsideBusanBounds(place) {
+	return (
+		place.longitude >= busanMapBounds.west &&
+		place.longitude <= busanMapBounds.east &&
+		place.latitude >= busanMapBounds.south &&
+		place.latitude <= busanMapBounds.north
+	)
+}
 
-	return filteredPlaces.value.map((place) => {
-		const adjustedLongitude = place.longitude + mapLongitudeOffset
-		const adjustedLatitude = place.latitude + mapLatitudeOffset
-		const x = ((adjustedLongitude - minLongitude) / longitudeRange) * 100
-		const y = 100 - ((adjustedLatitude - minLatitude) / latitudeRange) * 100
-
-		return {
-			...place,
-			x: Math.min(94, Math.max(6, x)),
-			y: Math.min(94, Math.max(6, y)),
-		}
-	})
+/**
+ * 오류 좌표인 0,0이나 부산과 크게 떨어진 좌표는 지도에서 제외한다.
+ */
+const visiblePlaces = computed(() => {
+	return filteredPlaces.value.filter(isInsideBusanBounds)
 })
 
-const resolvedMapPlaces = computed(() => {
-	const buckets = new Map()
+/* Leaflet 관련 상태 */
+const leafletMapRef = ref(null)
 
-	for (const place of mapPlaces.value) {
-		const bucketKey = `${place.x.toFixed(1)}-${place.y.toFixed(1)}`
-		if (!buckets.has(bucketKey)) {
-			buckets.set(bucketKey, [])
-		}
+let leafletMap = null
+let markerLayer = null
 
-		buckets.get(bucketKey).push(place)
+const markerByPlaceId = new Map()
+
+function initializeLeafletMap() {
+	if (!leafletMapRef.value || leafletMap) {
+		return
 	}
 
-	return Array.from(buckets.values()).flatMap((places) => {
-		if (places.length === 1) {
-			return places
-		}
+	leafletMap = L.map(leafletMapRef.value, {
+		zoomControl: false,
+		minZoom: 9,
+		maxZoom: 18,
+		zoomSnap: 0.5,
+		zoomDelta: 0.5,
+		preferCanvas: true,
+	})
 
-		const spreadRadius = Math.min(8, 2.2 + places.length * 0.55)
+	L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		minZoom: 0,
+		maxZoom: 19,
+		attribution:
+			'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	}).addTo(leafletMap)
 
-		return places.map((place, index) => {
-			const angle = (Math.PI * 2 * index) / places.length
-			const offsetX = Math.cos(angle) * spreadRadius
-			const offsetY = Math.sin(angle) * spreadRadius
+	markerLayer = L.layerGroup().addTo(leafletMap)
 
-			return {
-				...place,
-				x: Math.min(95, Math.max(5, place.x + offsetX)),
-				y: Math.min(95, Math.max(5, place.y + offsetY)),
-			}
+	resetZoom()
+	renderLeafletMarkers()
+
+	nextTick(() => {
+		leafletMap?.invalidateSize()
+	})
+}
+
+/**
+ * 필터링된 장소를 Leaflet 마커로 다시 그린다.
+ */
+function renderLeafletMarkers() {
+	if (!leafletMap || !markerLayer) {
+		return
+	}
+
+	markerLayer.clearLayers()
+	markerByPlaceId.clear()
+
+	for (const place of visiblePlaces.value) {
+		/*
+		 * Leaflet 좌표 순서:
+		 * [위도 latitude, 경도 longitude]
+		 */
+		const marker = L.circleMarker(
+			[place.latitude, place.longitude],
+			{
+				radius: 7,
+				color: '#ffffff',
+				weight: 4,
+				opacity: 1,
+				fillColor: place.color,
+				fillOpacity: 1,
+			},
+		)
+
+		marker.bindTooltip(place.title, {
+			direction: 'top',
+			offset: [0, -8],
+			opacity: 0.95,
 		})
-	})
-	})
 
-const maxPanX = computed(() => {
-	if (mapStageWidth.value <= 0 || zoomLevel.value <= 1) {
-		return 0
+		marker.on('click', () => {
+			selectPlace(place)
+		})
+
+		marker.addTo(markerLayer)
+		markerByPlaceId.set(place.id, marker)
 	}
 
-	return ((mapStageWidth.value * zoomLevel.value) - mapStageWidth.value) / 2
-})
-
-const maxPanY = computed(() => {
-	if (mapStageHeight.value <= 0 || zoomLevel.value <= 1) {
-		return 0
-	}
-
-	return ((mapStageHeight.value * zoomLevel.value) - mapStageHeight.value) / 2
-})
-
-function clampPanX(value) {
-	return Math.min(maxPanX.value, Math.max(-maxPanX.value, value))
+	updateSelectedMarkerStyle()
 }
 
-function clampPanY(value) {
-	return Math.min(maxPanY.value, Math.max(-maxPanY.value, value))
-}
+/**
+ * 선택된 마커만 더 크게 표시한다.
+ */
+function updateSelectedMarkerStyle() {
+	for (const [placeId, marker] of markerByPlaceId.entries()) {
+		const isSelected = selectedPlace.value?.id === placeId
 
-const mapViewportStyle = computed(() => ({
-	'--zoom-level': String(zoomLevel.value),
-	'--pan-x': `${panX.value}px`,
-	'--pan-y': `${panY.value}px`,
-}))
+		marker.setRadius(isSelected ? 10 : 7)
 
-function updateMapStageWidth() {
-	if (!mapStageRef.value) {
-		mapStageWidth.value = 0
-		return
+		marker.setStyle({
+			weight: isSelected ? 6 : 4,
+			fillOpacity: 1,
+		})
+
+		if (isSelected) {
+			marker.bringToFront()
+		}
 	}
-
-	mapStageWidth.value = mapStageRef.value.getBoundingClientRect().width
-	mapStageHeight.value = mapStageRef.value.getBoundingClientRect().height
-	panX.value = clampPanX(panX.value)
-	panY.value = clampPanY(panY.value)
-}
-
-function beginMapPan(event) {
-	if (zoomLevel.value <= 1) {
-		return
-	}
-
-	if (event.button !== 0) {
-		return
-	}
-
-	if (event.target.closest('.map-marker')) {
-		return
-	}
-
-	isDragging.value = true
-	activePointerId.value = event.pointerId
-	dragStartX.value = event.clientX
-	dragStartY.value = event.clientY
-	dragStartPanX.value = panX.value
-	dragStartPanY.value = panY.value
-	event.preventDefault()
-	window.addEventListener('pointermove', moveMapPan)
-	window.addEventListener('pointerup', endMapPan)
-	window.addEventListener('pointercancel', endMapPan)
-}
-
-function stopMapPanListeners() {
-	window.removeEventListener('pointermove', moveMapPan)
-	window.removeEventListener('pointerup', endMapPan)
-	window.removeEventListener('pointercancel', endMapPan)
-}
-
-function moveMapPan(event) {
-	if (!isDragging.value || event.pointerId !== activePointerId.value) {
-		return
-	}
-
-	const deltaX = event.clientX - dragStartX.value
-	const deltaY = event.clientY - dragStartY.value
-	panX.value = clampPanX(dragStartPanX.value + deltaX)
-	panY.value = clampPanY(dragStartPanY.value + deltaY)
-}
-
-function endMapPan(event) {
-	if (!isDragging.value || event.pointerId !== activePointerId.value) {
-		return
-	}
-
-	isDragging.value = false
-	activePointerId.value = null
-	stopMapPanListeners()
 }
 
 function pickRandomPlaces(pool, count) {
 	const shuffled = [...pool].sort(() => Math.random() - 0.5)
-	return shuffled.slice(0, Math.min(count, shuffled.length))
+
+	return shuffled.slice(
+		0,
+		Math.min(count, shuffled.length),
+	)
 }
 
 function refreshRecommendations() {
-	const pool = filteredPlaces.value
+	const pool = visiblePlaces.value
+
 	recommendedPlaces.value = pickRandomPlaces(pool, 3)
 	selectedPlace.value = recommendedPlaces.value[0] ?? null
 }
-
-watch(filteredPlaces, refreshRecommendations, { immediate: true })
 
 function setCategory(categoryKey) {
 	activeCategory.value = categoryKey
@@ -276,56 +253,60 @@ function setCategory(categoryKey) {
 
 function selectPlace(place) {
 	selectedPlace.value = place
+
+	const marker = markerByPlaceId.get(place.id)
+
+	if (marker) {
+		marker.bringToFront()
+		marker.openTooltip()
+	}
 }
 
 function zoomIn() {
-	zoomLevel.value = Math.min(zoomMax, Number((zoomLevel.value + zoomStep).toFixed(2)))
+	leafletMap?.zoomIn(0.5)
 }
 
 function zoomOut() {
-	zoomLevel.value = Math.max(zoomMin, Number((zoomLevel.value - zoomStep).toFixed(2)))
+	leafletMap?.zoomOut(0.5)
 }
 
 function resetZoom() {
-	zoomLevel.value = 1
-	panX.value = 0
-	panY.value = 0
+	leafletMap?.fitBounds(leafletBounds, {
+		padding: [12, 12],
+		animate: true,
+	})
 }
 
-watch(zoomLevel, (nextZoomLevel) => {
-	if (nextZoomLevel <= 1) {
-		panX.value = 0
-		panY.value = 0
-		return
-	}
+/**
+ * 카테고리가 바뀌면 추천 장소와 지도 마커를 갱신한다.
+ */
+watch(
+	visiblePlaces,
+	() => {
+		refreshRecommendations()
+		renderLeafletMarkers()
+	},
+	{
+		immediate: true,
+	},
+)
 
-	panX.value = clampPanX(panX.value)
-	panY.value = clampPanY(panY.value)
+watch(selectedPlace, () => {
+	updateSelectedMarkerStyle()
 })
 
 onMounted(() => {
-	updateMapStageWidth()
-
-	if (typeof ResizeObserver !== 'undefined' && mapStageRef.value) {
-		mapResizeObserver = new ResizeObserver(() => {
-			updateMapStageWidth()
-		})
-
-		mapResizeObserver.observe(mapStageRef.value)
-	}
+	initializeLeafletMap()
 })
 
 onBeforeUnmount(() => {
-	stopMapPanListeners()
-	mapResizeObserver?.disconnect()
-})
+	markerByPlaceId.clear()
+	markerLayer = null
 
-const mapBackgroundStyle = computed(() => {
-	return mapBackgroundUrl.value
-		? {
-			backgroundImage: `url(${mapBackgroundUrl.value})`,
-		}
-		: {}
+	if (leafletMap) {
+		leafletMap.remove()
+		leafletMap = null
+	}
 })
 </script>
 
@@ -359,55 +340,26 @@ const mapBackgroundStyle = computed(() => {
 				<div class="map-topline">
 					<span class="map-title">부산 지도 시각화</span>
 					<div class="map-controls">
-						<span class="map-count">{{ resolvedMapPlaces.length }}개 장소</span>
+						<span class="map-count">{{ visiblePlaces.length }}개 장소</span>
 						<div class="zoom-controls" aria-label="지도 확대 축소">
 							<button type="button" class="zoom-button" @click="zoomOut">-</button>
-							<button type="button" class="zoom-button zoom-reset" @click="resetZoom">
-								{{ Math.round(zoomLevel * 100) }}%
-							</button>
+							<button
+              type="button"
+              class="zoom-button zoom-reset"
+              @click="resetZoom"
+            >
+              초기화
+            </button>
 							<button type="button" class="zoom-button" @click="zoomIn">+</button>
 						</div>
 					</div>
 				</div>
 
-				<div
-					ref="mapStageRef"
-					class="map-stage"
-					:class="{ 'is-zoomed': zoomLevel > 1, 'is-dragging': isDragging }"
-					aria-label="부산 장소 시각화 지도"
-					@pointerdown="beginMapPan"
-					@dragstart.prevent
-				>
-					<div class="map-viewport" :style="mapViewportStyle">
-						<div class="map-background" :style="mapBackgroundStyle"></div>
-						<div class="map-background-overlay"></div>
-						<div class="map-grid"></div>
-						<div class="map-glow map-glow-a"></div>
-						<div class="map-glow map-glow-b"></div>
-
-						<button
-							v-for="place in resolvedMapPlaces"
-							:key="place.id"
-							type="button"
-							class="map-marker"
-							:class="{ selected: selectedPlace && selectedPlace.id === place.id }"
-							:style="{
-								left: `${place.x}%`,
-								top: `${place.y}%`,
-								'--marker-color': place.color,
-							}"
-							:title="place.title"
-							@click="selectPlace(place)"
-						>
-							<span class="marker-dot"></span>
-							<span class="marker-tooltip">{{ place.title }}</span>
-						</button>
-
-						<div v-if="resolvedMapPlaces.length === 0" class="empty-state">
-							좌표가 있는 장소가 없습니다.
-						</div>
-					</div>
-				</div>
+        <div
+          ref="leafletMapRef"
+          class="map-stage"
+          aria-label="부산 장소 시각화 지도"
+        ></div>
 
 				<div v-if="selectedPlace" class="selected-card">
 					<div class="selected-image-wrap">
@@ -647,16 +599,16 @@ const mapBackgroundStyle = computed(() => {
 
 .map-stage {
 	position: relative;
+	width: 100%;
+	height: 620px;
 	margin-top: 14px;
-	min-height: 620px;
 	border-radius: 24px;
 	overflow: hidden;
-	background: #ffffff;
+	background: #e2e8f0;
 	border: 1px solid rgba(15, 23, 42, 0.08);
-	touch-action: none;
-	user-select: none;
-	cursor: grab;
 }
+
+
 
 .map-stage.is-dragging {
 	cursor: grabbing;
@@ -680,11 +632,12 @@ const mapBackgroundStyle = computed(() => {
 .map-background {
 	position: absolute;
 	inset: 0;
-	background-color: #ffffff;
-	background-repeat: no-repeat;
-	background-position: center center;
-	background-size: cover;
-	opacity: 1;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: fill;
+	pointer-events: none;
+	user-select: none;
 }
 
 .map-background-overlay {
@@ -767,6 +720,16 @@ const mapBackgroundStyle = computed(() => {
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.map-stage :deep(.leaflet-container) {
+	width: 100%;
+	height: 100%;
+	font-family: inherit;
+}
+
+.map-stage :deep(.leaflet-control-attribution) {
+	font-size: 10px;
 }
 
 .map-marker:hover .marker-tooltip,
@@ -919,20 +882,14 @@ const mapBackgroundStyle = computed(() => {
 	}
 }
 
-@media (max-width: 760px) {
-	.busan-map-section {
-		width: calc(100% - 20px);
-		margin: 20px auto;
-		padding: 18px;
-		border-radius: 22px;
-	}
 
+@media (max-width: 760px) {
 	.category-group {
 		grid-template-columns: 1fr 1fr;
 	}
 
 	.map-stage {
-		min-height: 420px;
+		height: 420px;
 	}
 
 	.selected-card,

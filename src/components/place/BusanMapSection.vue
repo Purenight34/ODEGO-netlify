@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
+import busanMapBackground from '../../assets/images/BusanMap_0.png'
 
 const categoryList = [
 	{ key: 'all', label: '전체' },
@@ -34,6 +35,17 @@ function normalizePlaces(sourceKey, dataset) {
 		.map((item) => {
 			const longitude = Number(item.mapx)
 			const latitude = Number(item.mapy)
+			const extraInfo =
+				sourceKey === 'festival'
+					? {
+						period:
+							item.eventstartdate && item.eventenddate
+								? `${item.eventstartdate} ~ ${item.eventenddate}`
+								: '',
+						venue: item.eventplace || '',
+						playtime: item.playtime || '',
+					}
+					: {}
 
 			return {
 				id: `${sourceKey}-${item.contentid}`,
@@ -44,6 +56,7 @@ function normalizePlaces(sourceKey, dataset) {
 				image: item.firstimage2 || item.firstimage || '',
 				address: item.addr1 || '주소 정보 없음',
 				tel: item.tel || '',
+				extraInfo,
 				contentTypeId: item.contenttypeid || '',
 				longitude,
 				latitude,
@@ -62,10 +75,19 @@ const activeCategory = ref('all')
 const selectedPlace = ref(null)
 const recommendedPlaces = ref([])
 const zoomLevel = ref(1)
+const mapBackgroundUrl = ref(busanMapBackground)
 
 const zoomStep = 0.15
 const zoomMin = 0.85
 const zoomMax = 1.6
+
+// This crop box should match the PNG export range used for BusanMap_0.
+const mapBounds = {
+	minLongitude: 128.82550074486798,
+	maxLongitude: 129.26286949222606,
+	minLatitude: 35.01196537305377,
+	maxLatitude: 35.350877484127,
+}
 
 const filteredPlaces = computed(() => {
 	if (activeCategory.value === 'all') {
@@ -75,34 +97,8 @@ const filteredPlaces = computed(() => {
 	return allPlaces.value.filter((place) => place.sourceKey === activeCategory.value)
 })
 
-const mapBounds = computed(() => {
-	const places = filteredPlaces.value
-
-	if (places.length === 0) {
-		return {
-			minLongitude: 129.0,
-			maxLongitude: 129.3,
-			minLatitude: 35.0,
-			maxLatitude: 35.3,
-		}
-	}
-
-	const longitudes = places.map((place) => place.longitude)
-	const latitudes = places.map((place) => place.latitude)
-
-	const longitudePadding = Math.max((Math.max(...longitudes) - Math.min(...longitudes)) * 0.15, 0.01)
-	const latitudePadding = Math.max((Math.max(...latitudes) - Math.min(...latitudes)) * 0.15, 0.01)
-
-	return {
-		minLongitude: Math.min(...longitudes) - longitudePadding,
-		maxLongitude: Math.max(...longitudes) + longitudePadding,
-		minLatitude: Math.min(...latitudes) - latitudePadding,
-		maxLatitude: Math.max(...latitudes) + latitudePadding,
-	}
-})
-
 const mapPlaces = computed(() => {
-	const { minLongitude, maxLongitude, minLatitude, maxLatitude } = mapBounds.value
+	const { minLongitude, maxLongitude, minLatitude, maxLatitude } = mapBounds
 	const longitudeRange = maxLongitude - minLongitude || 1
 	const latitudeRange = maxLatitude - minLatitude || 1
 
@@ -149,6 +145,10 @@ const resolvedMapPlaces = computed(() => {
 			}
 		})
 	})
+
+const mapViewportStyle = computed(() => ({
+	'--zoom-level': String(zoomLevel.value),
+}))
 })
 
 function pickRandomPlaces(pool, count) {
@@ -183,6 +183,14 @@ function zoomOut() {
 function resetZoom() {
 	zoomLevel.value = 1
 }
+
+const mapBackgroundStyle = computed(() => {
+	return mapBackgroundUrl.value
+		? {
+			backgroundImage: `url(${mapBackgroundUrl.value})`,
+		}
+		: {}
+})
 </script>
 
 <template>
@@ -228,36 +236,33 @@ function resetZoom() {
 				</div>
 
 				<div class="map-stage" aria-label="부산 장소 시각화 지도">
-					<div
-						class="map-canvas"
-						:style="{
-							transform: `translate(-50%, -50%) scale(${zoomLevel})`,
-						}"
-					>
+					<div class="map-viewport" :style="mapViewportStyle">
+						<div class="map-background" :style="mapBackgroundStyle"></div>
+						<div class="map-background-overlay"></div>
 						<div class="map-grid"></div>
 						<div class="map-glow map-glow-a"></div>
 						<div class="map-glow map-glow-b"></div>
 
 						<button
 							v-for="place in resolvedMapPlaces"
-						:key="place.id"
-						type="button"
-						class="map-marker"
-						:class="{ selected: selectedPlace && selectedPlace.id === place.id }"
-						:style="{
-							left: `${place.x}%`,
-							top: `${place.y}%`,
-							'--marker-color': place.color,
-						}"
-						:title="place.title"
-						@click="selectPlace(place)"
-					>
-						<span class="marker-dot"></span>
-						<span class="marker-tooltip">{{ place.title }}</span>
+							:key="place.id"
+							type="button"
+							class="map-marker"
+							:class="{ selected: selectedPlace && selectedPlace.id === place.id }"
+							:style="{
+								left: `${place.x}%`,
+								top: `${place.y}%`,
+								'--marker-color': place.color,
+							}"
+							:title="place.title"
+							@click="selectPlace(place)"
+						>
+							<span class="marker-dot"></span>
+							<span class="marker-tooltip">{{ place.title }}</span>
 						</button>
 
 						<div v-if="resolvedMapPlaces.length === 0" class="empty-state">
-						좌표가 있는 장소가 없습니다.
+							좌표가 있는 장소가 없습니다.
 						</div>
 					</div>
 				</div>
@@ -273,6 +278,9 @@ function resetZoom() {
 						<h3>{{ selectedPlace.title }}</h3>
 						<p>{{ selectedPlace.address }}</p>
 						<p v-if="selectedPlace.tel">{{ selectedPlace.tel }}</p>
+						<p v-if="selectedPlace.extraInfo?.venue">{{ selectedPlace.extraInfo.venue }}</p>
+						<p v-if="selectedPlace.extraInfo?.period">{{ selectedPlace.extraInfo.period }}</p>
+						<p v-if="selectedPlace.extraInfo?.playtime">{{ selectedPlace.extraInfo.playtime }}</p>
 					</div>
 				</div>
 			</article>
@@ -404,9 +412,12 @@ function resetZoom() {
 
 .category-button:hover,
 .refresh-button:hover,
-.map-marker:hover,
 .recommend-card:hover {
 	transform: translateY(-1px);
+}
+
+.map-marker:hover {
+	transform: translate(-50%, -50%);
 }
 
 .content-grid {
@@ -490,14 +501,32 @@ function resetZoom() {
 	border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-.map-canvas {
+.map-viewport {
 	position: absolute;
 	top: 50%;
 	left: 50%;
-	width: 100%;
-	height: 100%;
+	width: calc(100% * var(--zoom-level, 1));
+	height: calc(100% * var(--zoom-level, 1));
+	transform: translate(-50%, -50%);
 	transform-origin: center center;
-	transition: transform 0.2s ease;
+	transition: width 0.2s ease, height 0.2s ease, transform 0.2s ease;
+}
+
+.map-background {
+	position: absolute;
+	inset: 0;
+	background-color: #ffffff;
+	background-repeat: no-repeat;
+	background-position: center center;
+	background-size: cover;
+	opacity: 1;
+}
+
+.map-background-overlay {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08));
+	pointer-events: none;
 }
 
 .map-grid {

@@ -1,9 +1,9 @@
 <script setup>
-import HomeView from './views/HomeView.vue'
+import BusanMapSection from './components/place/BusanMapSection.vue'
 </script>
 
 <template>
-  <HomeView />
+  <BusanMapSection />
 </template>
 
 <style scoped>

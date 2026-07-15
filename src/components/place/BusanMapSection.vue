@@ -3,7 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import sightseeingRaw from '../../data/부산_관광지.json'
 import courseRaw from '../../data/부산_여행코스.json'
 import festivalRaw from '../../data/부산_축제공연행사.json'
-import busanMapBackground from '../../assets/images/BusanMap_0.png'
+//import busanMapBackground from '../../assets/images/BusanMap_0.png'
+import busanMapBackground from '../../assets/images/BusanMap_OSM.svg'
 
 const categoryList = [
 	{ key: 'all', label: '전체' },
@@ -28,6 +29,29 @@ const sourceMap = {
 		color: '#2563eb',
 		dataset: festivalRaw.items ?? [],
 	},
+}
+
+const mapImageWidth = ref(1600)
+const mapImageHeight = ref(1618)
+
+const mapStageStyle = computed(() => ({
+	'--map-image-aspect-ratio':
+		`${mapImageWidth.value} / ${mapImageHeight.value}`,
+}))
+
+function handleMapImageLoad(event) {
+	const image = event.currentTarget
+
+	if (!image.naturalWidth || !image.naturalHeight) {
+		return
+	}
+
+	mapImageWidth.value = image.naturalWidth
+	mapImageHeight.value = image.naturalHeight
+
+	requestAnimationFrame(() => {
+		updateMapStageWidth()
+	})
 }
 
 function normalizePlaces(sourceKey, dataset) {
@@ -92,15 +116,12 @@ let mapResizeObserver = null
 const zoomStep = 0.5
 const zoomMin = 1
 const zoomMax = 4
-const mapLongitudeOffset = 0
-const mapLatitudeOffset = 0
 
-// This crop box should match the PNG export range used for BusanMap_0.
 const mapBounds = {
-	minLongitude: 128.82550074486798,
-	maxLongitude: 129.26286949222606,
-	minLatitude: 35.01196537305377,
-	maxLatitude: 35.350877484127,
+	minLongitude: 128.80, // west
+	maxLongitude: 129.29, // east
+	minLatitude: 34.98,   // south
+	maxLatitude: 35.385,  // north
 }
 
 const filteredPlaces = computed(() => {
@@ -111,57 +132,70 @@ const filteredPlaces = computed(() => {
 	return allPlaces.value.filter((place) => place.sourceKey === activeCategory.value)
 })
 
+const WEB_MERCATOR_MAX_LATITUDE = 85.05112878
+
+function latitudeToMercator(latitude) {
+	const clampedLatitude = Math.min(
+		WEB_MERCATOR_MAX_LATITUDE,
+		Math.max(-WEB_MERCATOR_MAX_LATITUDE, latitude),
+	)
+
+	const radians = (clampedLatitude * Math.PI) / 180
+
+	return Math.log(Math.tan(Math.PI / 4 + radians / 2))
+}
+
+function isInsideMapBounds(place) {
+	return (
+		Number.isFinite(place.longitude) &&
+		Number.isFinite(place.latitude) &&
+		place.longitude >= mapBounds.minLongitude &&
+		place.longitude <= mapBounds.maxLongitude &&
+		place.latitude >= mapBounds.minLatitude &&
+		place.latitude <= mapBounds.maxLatitude
+	)
+}
 const mapPlaces = computed(() => {
-	const { minLongitude, maxLongitude, minLatitude, maxLatitude } = mapBounds
-	const longitudeRange = maxLongitude - minLongitude || 1
-	const latitudeRange = maxLatitude - minLatitude || 1
+	const {
+		minLongitude,
+		maxLongitude,
+		minLatitude,
+		maxLatitude,
+	} = mapBounds
 
-	return filteredPlaces.value.map((place) => {
-		const adjustedLongitude = place.longitude + mapLongitudeOffset
-		const adjustedLatitude = place.latitude + mapLatitudeOffset
-		const x = ((adjustedLongitude - minLongitude) / longitudeRange) * 100
-		const y = 100 - ((adjustedLatitude - minLatitude) / latitudeRange) * 100
+	const longitudeRange = maxLongitude - minLongitude
 
-		return {
-			...place,
-			x: Math.min(94, Math.max(6, x)),
-			y: Math.min(94, Math.max(6, y)),
-		}
-	})
-})
+	const northMercator = latitudeToMercator(maxLatitude)
+	const southMercator = latitudeToMercator(minLatitude)
+	const mercatorRange = northMercator - southMercator
 
-const resolvedMapPlaces = computed(() => {
-	const buckets = new Map()
-
-	for (const place of mapPlaces.value) {
-		const bucketKey = `${place.x.toFixed(1)}-${place.y.toFixed(1)}`
-		if (!buckets.has(bucketKey)) {
-			buckets.set(bucketKey, [])
-		}
-
-		buckets.get(bucketKey).push(place)
+	if (longitudeRange <= 0 || mercatorRange <= 0) {
+		return []
 	}
 
-	return Array.from(buckets.values()).flatMap((places) => {
-		if (places.length === 1) {
-			return places
-		}
+	return filteredPlaces.value
+		.filter(isInsideMapBounds)
+		.map((place) => {
+			// OSM Web Mercator에서는 경도 방향은 선형이다.
+			const x =
+				((place.longitude - minLongitude) / longitudeRange) *
+				100
 
-		const spreadRadius = Math.min(8, 2.2 + places.length * 0.55)
+			// 북쪽이 이미지 위쪽이므로 north - point 순서로 계산한다.
+			const pointMercator = latitudeToMercator(place.latitude)
 
-		return places.map((place, index) => {
-			const angle = (Math.PI * 2 * index) / places.length
-			const offsetX = Math.cos(angle) * spreadRadius
-			const offsetY = Math.sin(angle) * spreadRadius
+			const y =
+				((northMercator - pointMercator) / mercatorRange) *
+				100
 
 			return {
 				...place,
-				x: Math.min(95, Math.max(5, place.x + offsetX)),
-				y: Math.min(95, Math.max(5, place.y + offsetY)),
+				x,
+				y,
 			}
 		})
-	})
-	})
+})
+const resolvedMapPlaces = computed(() => mapPlaces.value)
 
 const maxPanX = computed(() => {
 	if (mapStageWidth.value <= 0 || zoomLevel.value <= 1) {
@@ -320,13 +354,6 @@ onBeforeUnmount(() => {
 	mapResizeObserver?.disconnect()
 })
 
-const mapBackgroundStyle = computed(() => {
-	return mapBackgroundUrl.value
-		? {
-			backgroundImage: `url(${mapBackgroundUrl.value})`,
-		}
-		: {}
-})
 </script>
 
 <template>
@@ -371,16 +398,26 @@ const mapBackgroundStyle = computed(() => {
 					</div>
 				</div>
 
-				<div
-					ref="mapStageRef"
-					class="map-stage"
-					:class="{ 'is-zoomed': zoomLevel > 1, 'is-dragging': isDragging }"
-					aria-label="부산 장소 시각화 지도"
-					@pointerdown="beginMapPan"
-					@dragstart.prevent
-				>
+        <div
+          ref="mapStageRef"
+          class="map-stage"
+          :style="mapStageStyle"
+          :class="{
+            'is-zoomed': zoomLevel > 1,
+            'is-dragging': isDragging,
+          }"
+          aria-label="부산 장소 시각화 지도"
+          @pointerdown="beginMapPan"
+          @dragstart.prevent
+        >
 					<div class="map-viewport" :style="mapViewportStyle">
-						<div class="map-background" :style="mapBackgroundStyle"></div>
+						<img
+                class="map-background"
+                :src="mapBackgroundUrl"
+                alt=""
+                draggable="false"
+                @load="handleMapImageLoad"
+              />
 						<div class="map-background-overlay"></div>
 						<div class="map-grid"></div>
 						<div class="map-glow map-glow-a"></div>
@@ -632,8 +669,10 @@ const mapBackgroundStyle = computed(() => {
 
 .map-stage {
 	position: relative;
+	width: 100%;
+	aspect-ratio: var(--map-image-aspect-ratio, 1600 / 1618);
+	min-height: 0;
 	margin-top: 14px;
-	min-height: 620px;
 	border-radius: 24px;
 	overflow: hidden;
 	background: #ffffff;
@@ -665,11 +704,12 @@ const mapBackgroundStyle = computed(() => {
 .map-background {
 	position: absolute;
 	inset: 0;
-	background-color: #ffffff;
-	background-repeat: no-repeat;
-	background-position: center center;
-	background-size: cover;
-	opacity: 1;
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: fill;
+	pointer-events: none;
+	user-select: none;
 }
 
 .map-background-overlay {
@@ -905,19 +945,8 @@ const mapBackgroundStyle = computed(() => {
 }
 
 @media (max-width: 760px) {
-	.busan-map-section {
-		width: calc(100% - 20px);
-		margin: 20px auto;
-		padding: 18px;
-		border-radius: 22px;
-	}
-
 	.category-group {
 		grid-template-columns: 1fr 1fr;
-	}
-
-	.map-stage {
-		min-height: 420px;
 	}
 
 	.selected-card,

@@ -1,17 +1,32 @@
 <script setup>
-import CommunitySection from './components/community/CommunitySection.vue'
+import BusanVisualMap from './components/place/BusanMapSection.vue'
 </script>
 
 <template>
-  <main class="app-shell">
-    <CommunitySection />
-  </main>
+	<main>
+		<BusanVisualMap />
+	</main>
 </template>
 
-<style scoped>
-.app-shell {
-  min-height: 100vh;
-  padding: 2rem 1rem 3rem;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+<style>
+* {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+	min-height: 100%;
+	margin: 0;
+}
+
+body {
+	background: #f1f5f9;
+	font-family:
+		Pretendard,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		sans-serif;
 }
 </style>

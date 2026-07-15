@@ -104,7 +104,7 @@ watch(
 </script>
 
 <template>
-  <article v-if="post" class="detail-card">
+  <article v-if="post" class="detail-main">
     <div class="detail-header">
       <div>
         <p class="eyebrow">{{ post.category }}</p>
@@ -149,51 +149,55 @@ watch(
       <span>조회수 {{ post.views }}</span>
     </div>
 
-    <div v-if="isPasswordMode" class="password-box">
-      <div class="password-head">
-        <p class="password-title">글 수정/삭제</p>
-        <button class="icon-button" type="button" @click="isPasswordMode = false">✕</button>
+    <div class="detail-layout">
+      <div class="detail-content">
+        <div class="comment-box">
+          <h4>댓글 {{ post.comments?.length || 0 }}</h4>
+          <textarea :value="commentText" rows="3" placeholder="댓글을 입력해보세요" @input="emit('update:comment-text', $event.target.value)" />
+          <button class="primary-button" @click="emit('add-comment')">댓글 작성</button>
+          <ul v-if="post.comments?.length" class="comment-list">
+            <li v-for="comment in post.comments" :key="comment.id">
+              <strong>익명</strong>
+              <span>{{ comment.content }}</span>
+            </li>
+          </ul>
+        </div>
       </div>
-      <input
-        :value="passwordInput"
-        type="number"
-        inputmode="numeric"
-        placeholder="비밀번호 (숫자)"
-        @input="emit('update:password-input', $event.target.value.slice(0, 4))"
-        class="password-input"
-      />
-      <button class="secondary-button compact" @click="verifyPassword">확인</button>
-      <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
-    </div>
 
-    <div class="comment-box">
-      <h4>댓글</h4>
-      <textarea :value="commentText" rows="3" placeholder="댓글을 입력해보세요" @input="emit('update:comment-text', $event.target.value)" />
-      <button class="primary-button" @click="emit('add-comment')">댓글 작성</button>
-      <ul v-if="post.comments?.length" class="comment-list">
-        <li v-for="comment in post.comments" :key="comment.id">
-          <strong>익명</strong>
-          <span>{{ comment.content }}</span>
-        </li>
-      </ul>
+      <aside class="detail-side">
+        <div v-if="isPasswordMode" class="password-box">
+          <div class="password-head">
+            <p class="password-title">글 수정/삭제</p>
+            <button class="icon-button" type="button" @click="isPasswordMode = false">✕</button>
+          </div>
+          <input
+            :value="passwordInput"
+            type="number"
+            inputmode="numeric"
+            placeholder="비밀번호 (숫자)"
+            @input="emit('update:password-input', $event.target.value.slice(0, 4))"
+            class="password-input"
+          />
+          <button class="secondary-button compact" @click="verifyPassword">확인</button>
+          <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
+        </div>
+        <div v-else class="password-hint">
+          <p>비밀번호 인증 후 수정과 삭제가 가능합니다.</p>
+        </div>
+      </aside>
     </div>
   </article>
 
-  <div v-else class="detail-card empty-state">
+  <div v-else class="detail-main empty-state">
     <p>게시글을 선택하면 상세 내용을 확인할 수 있습니다.</p>
   </div>
 </template>
 
 <style scoped>
-.detail-card {
+.detail-main {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.25rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
 }
 
 .detail-header {
@@ -303,18 +307,30 @@ h4 {
   cursor: pointer;
 }
 
+.detail-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.detail-content,
+.detail-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
 .edit-form,
-.password-box,
 .comment-box {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
 }
 
-.password-box {
-  align-self: flex-end;
-  width: min(16rem, 100%);
-  padding: 0.75rem;
+.password-box,
+.password-hint {
+  padding: 0.85rem;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   background: #fff;
@@ -364,6 +380,11 @@ h4 {
   font-size: 0.85rem;
 }
 
+.password-hint p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
 
 label {
   display: flex;
@@ -400,5 +421,11 @@ textarea {
   justify-content: center;
   min-height: 220px;
   color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

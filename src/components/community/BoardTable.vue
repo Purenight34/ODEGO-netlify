@@ -22,6 +22,7 @@ const emit = defineEmits(['select-post'])
         v-for="post in posts"
         :key="post.id"
         :post="post"
+        :post-number="post.id"
         :selected="post.id === selectedPostId"
         @select="emit('select-post', $event)"
       />
@@ -40,7 +41,7 @@ const emit = defineEmits(['select-post'])
 .rows {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.7rem;
 }
 
 .empty {

@@ -162,7 +162,12 @@ watch(searchTerm, () => {
 </script>
 
 <template>
-  <section class="community-shell">
+  <section id="community" class="community-shell">
+    <div class="section-block">
+      <p class="eyebrow">Community</p>
+      <h2>부산커뮤니티</h2>
+    </div>
+
     <div class="search-card">
       <select v-model="searchField" class="search-select">
         <option value="all">전체</option>
@@ -230,14 +235,16 @@ watch(searchTerm, () => {
 
 <style scoped>
 .community-shell {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 3rem;
-  min-height: 100vh;
-  background: #f8fafc;
+  width: min(1280px, calc(100% - 32px));
+  margin: 40px auto;
+  padding: 28px;
+  border-radius: 28px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .search-card,
@@ -245,8 +252,8 @@ watch(searchTerm, () => {
 .detail-card,
 .modal-card {
   background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
@@ -258,9 +265,9 @@ watch(searchTerm, () => {
 
 .search-select,
 .search-input {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
   background: #f8fafc;
   font: inherit;
   color: #334155;
@@ -282,6 +289,23 @@ watch(searchTerm, () => {
   background: #1f2937;
   color: white;
   cursor: pointer;
+}
+
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 22px;
+  background: rgba(37, 99, 235, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.section-block h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: #0f172a;
 }
 
 .board-head {

@@ -330,16 +330,15 @@ const mapBackgroundStyle = computed(() => {
 </script>
 
 <template>
-	<section class="busan-map-section">
+	<section id="place" class="busan-map-section">
 		<header class="section-header">
-			<div>
+			<div class="section-block">
 				<p class="eyebrow">Busan visual map</p>
-				<h2>관광지, 여행코스, 축제공연행사를 한 번에</h2>
+				<h2>부산지도</h2>
 				<p class="description">
-					버튼으로 범주를 바꾸면 지도 마커와 오른쪽 추천장이 함께 바뀌도록 구성했습니다.
+					관광지, 여행코스, 축제공연행사를 한 번에 보여줍니다.
 				</p>
 			</div>
-
 			<div class="category-group" role="tablist" aria-label="부산 장소 카테고리 필터">
 				<button
 					v-for="category in categoryList"
@@ -488,6 +487,22 @@ const mapBackgroundStyle = computed(() => {
 	display: grid;
 	gap: 20px;
 	margin-bottom: 22px;
+}
+
+.section-block {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	padding: 1rem 1.25rem;
+	border-radius: 22px;
+	background: rgba(37, 99, 235, 0.06);
+	border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.section-block h2 {
+	margin: 0;
+	font-size: 1.8rem;
+	color: #0f172a;
 }
 
 .eyebrow {

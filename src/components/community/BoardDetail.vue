@@ -197,6 +197,7 @@ watch(
           <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
         </div>
       </div>
+      <p v-if="passwordError" class="password-error">{{ passwordError }}</p>
     </div>
 
     <div class="detail-layout">
@@ -459,6 +460,12 @@ h4 {
 
 .password-actions .secondary-button.compact {
   width: fit-content;
+}
+
+.password-error {
+  margin: 0.25rem 0 0 0;
+  color: #dc2626;
+  font-size: 0.82rem;
 }
 
 label {

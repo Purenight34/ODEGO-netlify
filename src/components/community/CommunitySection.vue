@@ -169,10 +169,6 @@ watch(searchTerm, () => {
         <h2>실시간으로 소통하는 부산 커뮤니티</h2>
         <p class="description">검색하고, 읽고, 댓글을 남기며 다른 여행자와 이야기를 나눠보세요.</p>
       </div>
-      <button class="write-button" @click="toggleCreateForm">
-        <span class="plus-icon">✎</span>
-        글쓰기
-      </button>
     </header>
 
     <div class="section-block">

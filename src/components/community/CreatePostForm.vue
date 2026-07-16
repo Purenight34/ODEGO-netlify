@@ -8,11 +8,11 @@ const form = reactive({
   content: '',
   password: '',
   category: '맛집',
-  image: ''
+  images: []
 })
 
 const error = ref('')
-const preview = ref('')
+const preview = ref([])
 
 function onPasswordInput(e) {
   // allow only digits, limit to 4 characters
@@ -35,37 +35,50 @@ function submit() {
     content: form.content.trim(),
     password: form.password.trim(),
     category: form.category
-    ,image: form.image || ''
+    ,images: Array.isArray(form.images) ? form.images : []
   })
 
   form.title = ''
   form.content = ''
   form.password = ''
   form.category = '맛집'
-  form.image = ''
-  preview.value = ''
+  form.images = []
+  preview.value = []
   error.value = ''
 }
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'))
+    reader.onload = () => resolve(reader.result)
+    reader.readAsDataURL(file)
+  })
+}
 
-function onFileChange(e) {
-  const file = e.target.files && e.target.files[0]
-  if (!file) {
-    form.image = ''
-    preview.value = ''
-    return
-  }
+async function onFileChange(e) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
 
-  if (!file.type.startsWith('image/')) {
+  const invalid = files.find((f) => !f.type.startsWith('image/'))
+  if (invalid) {
     error.value = '이미지 파일만 업로드 가능합니다.'
     return
   }
 
-  const reader = new FileReader()
-  reader.onload = () => {
-    form.image = reader.result
-    preview.value = reader.result
+  try {
+    const results = await Promise.all(files.map((f) => readFileAsDataURL(f)))
+    form.images = [...form.images, ...results]
+    preview.value = form.images
+    // clear native input so same file can be reselected
+    e.target.value = ''
+  } catch (err) {
+    error.value = err.message || '파일 처리 중 오류가 발생했습니다.'
   }
-  reader.readAsDataURL(file)
+}
+
+function removeImage(index) {
+  form.images.splice(index, 1)
+  preview.value = [...form.images]
 }
 </script>
 
@@ -82,10 +95,15 @@ function onFileChange(e) {
     <input v-model="form.password" @input="onPasswordInput" type="password" maxlength="4" placeholder="비밀번호 (숫자 4자리)" class="field" />
     <textarea v-model="form.content" rows="5" placeholder="내용" class="field" />
     <label class="file-button">
-      <input type="file" accept="image/*" @change="onFileChange" />
+      <input type="file" accept="image/*" multiple @change="onFileChange" />
       <span class="file-button-text">사진 추가</span>
     </label>
-    <img v-if="preview" :src="preview" alt="preview" class="image-preview" />
+    <div v-if="preview.length" class="thumbnails">
+      <div v-for="(src, idx) in preview" :key="idx" class="thumb">
+        <img :src="src" alt="thumb" />
+        <button type="button" class="thumb-remove" @click="removeImage(idx)">✕</button>
+      </div>
+    </div>
     <p v-if="error" class="error-text">{{ error }}</p>
     <div class="actions">
       <button type="submit" class="submit-button">등록</button>
@@ -167,5 +185,45 @@ textarea {
   border-radius: 10px;
   margin-top: 0.4rem;
   object-fit: cover;
+}
+
+.thumbnails {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.thumb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 18px;
 }
 </style>

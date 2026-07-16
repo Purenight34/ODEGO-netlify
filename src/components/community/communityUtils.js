@@ -3,7 +3,7 @@ export const STORAGE_KEY = 'community-posts-v1'
 export function normalizePost(post) {
   return {
     ...post,
-    image: post.image || '',
+    images: Array.isArray(post.images) ? post.images : post.image ? [post.image] : [],
     comments: Array.isArray(post.comments)
       ? post.comments.map((comment, index) => normalizeComment(comment, index + 1))
       : [],
@@ -54,7 +54,7 @@ export function createPostEntry(payload, id = Date.now()) {
     likes: 0,
     summary: payload.content.slice(0, 60),
     content: payload.content,
-    image: payload.image || '',
+    images: Array.isArray(payload.images) ? payload.images : payload.image ? [payload.image] : [],
     tags: [],
     password: payload.password,
     comments: []
@@ -73,7 +73,7 @@ export function updatePostEntry(posts, postId, payload) {
       content: payload.content,
       summary: payload.content.slice(0, 60),
       date: new Date().toISOString().slice(0, 10),
-      image: post.image || ''
+      images: post.images || []
     })
   })
 }

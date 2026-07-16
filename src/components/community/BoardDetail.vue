@@ -45,6 +45,7 @@ const editForm = reactive({
 })
 const isPasswordMode = ref(false)
 const requestedAction = ref(null)
+const currentImageIndex = ref(0)
 
 function requestEditAuth() {
   requestedAction.value = 'edit'
@@ -97,6 +98,7 @@ watch(
     if (value) {
       editForm.title = value.title
       editForm.content = value.content
+      currentImageIndex.value = 0
     }
     isPasswordMode.value = false
   },
@@ -146,7 +148,15 @@ watch(
     </div>
 
     <template v-else>
-      <img v-if="post.image" :src="post.image" alt="post image" class="post-image" />
+      <div v-if="post.images && post.images.length" class="image-carousel">
+        <div class="carousel-track" :style="{ transform: `translateX(-${currentImageIndex * 100}%)` }">
+          <div class="carousel-slide" v-for="(src, i) in post.images" :key="i">
+            <img :src="src" alt="post image" class="post-image" />
+          </div>
+        </div>
+        <button v-if="post.images.length > 1" type="button" class="carousel-prev" @click="currentImageIndex = (currentImageIndex - 1 + post.images.length) % post.images.length">‹</button>
+        <button v-if="post.images.length > 1" type="button" class="carousel-next" @click="currentImageIndex = (currentImageIndex + 1) % post.images.length">›</button>
+      </div>
       <p class="content">{{ post.content }}</p>
     </template>
 
@@ -291,12 +301,54 @@ h4 {
 }
 
 .post-image {
-  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
   border-radius: 12px;
   margin: 0.6rem 0;
   background: #f8fafc;
 }
+
+.image-carousel {
+  position: relative;
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 320ms ease-in-out;
+  width: 100%;
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 420px;
+}
+
+.carousel-prev,
+.carousel-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.carousel-prev { left: 8px }
+.carousel-next { right: 8px }
 
 .tag-list {
   display: flex;

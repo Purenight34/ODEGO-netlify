@@ -14,8 +14,10 @@
               :class="{ active: activeSection === item.id }"
               @click="activeSection = item.id"
             >
-              <component :is="item.icon" class="nav-icon" size="20" />
-              <span class="nav-label">{{ item.label }}</span>
+              <span class="nav-content">
+                <component :is="item.icon" class="nav-icon" size="20" />
+                <span class="nav-label">{{ item.label }}</span>
+              </span>
             </a>
           </nav>
     </div>
@@ -145,19 +147,19 @@ onBeforeUnmount(() => {
 }
 
 .nav-item{
+  text-decoration:none;
+  color:#333;
+  font-size:18px;
+  font-weight:600;
+  transition:.3s;
+}
 
-    position:relative;
-
-    text-decoration:none;
-
-    color:#333;
-
-    font-size:18px;
-
-    font-weight:600;
-
-    transition:.3s;
-
+.nav-content{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
 }
 
 .nav-item:hover{
@@ -166,37 +168,13 @@ onBeforeUnmount(() => {
 
 }
 
-.nav-item::after{
 
-    content:"";
-
-    position:absolute;
-
-    left:0;
-    bottom:-8px;
-
-    width:0%;
-
-    height:2px;
-
-    background:#2D7FF9;
-
-    transition:.3s;
-
-}
-
-.nav-item:hover::after{
-
-    width:100%;
-
+.nav-content::after{
+  display: none;
 }
 
 .nav-item.active {
-    color:#2D7FF9;
-}
-
-.nav-item.active::after {
-    width:100%;
+  color:#2D7FF9;
 }
 
 /* Tablet */
@@ -239,24 +217,12 @@ onBeforeUnmount(() => {
 
 }
 
-/* Center the underline under the icon when labels are hidden */
-.nav-item::after{
-  left:50%;
-  transform:translateX(-50%);
-  width:0;
-}
-
-.nav-item:hover::after{
-  width:20px;
-}
-
-.nav-item.active::after{
-  width:20px;
-}
 
 /* Show icons instead of text on small screens */
 .nav-label{ display:none; }
 .nav-icon{ display:inline-block; }
+
+/* underline removed intentionally */
 
 }
 

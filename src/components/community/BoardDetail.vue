@@ -172,10 +172,11 @@ watch(
           </div>
           <input
             :value="passwordInput"
-            type="number"
+            type="text"
             inputmode="numeric"
-            placeholder="비밀번호 (숫자)"
-            @input="emit('update:password-input', $event.target.value.slice(0, 4))"
+            maxlength="4"
+            placeholder="비밀번호 (숫자 4자리)"
+            @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
             class="password-input"
           />
           <button class="secondary-button compact" @click="verifyPassword">확인</button>

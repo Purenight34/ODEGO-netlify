@@ -145,6 +145,11 @@ function addCommentToPost() {
 function verifyPassword(postId) {
   const target = posts.value.find((post) => post.id === postId)
   if (!target) return
+  // ensure password is exactly 4 digits
+  if (!/^\d{4}$/.test(passwordInput.value)) {
+    passwordError.value = '비밀번호는 숫자 4자리여야 합니다.'
+    return
+  }
 
   if (passwordInput.value !== target.password) {
     passwordError.value = '비밀번호가 일치하지 않습니다.'

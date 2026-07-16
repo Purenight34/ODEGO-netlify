@@ -1,93 +1,42 @@
-# vibe-coding
+## 기능 요약 
+### Local hub : ODEGO
+1. 목적     
+  - 부산관광객에게 관련정보를 제공하고, 여행 중 겪는 고민을 해결하여 '현지인처럼 여행하는 부산'경험을 제공함 
+  - 부산 거주민도 모를 수 있는 지역에 관한 정보를 부산 한정으로 찾아볼 수 있게 정보를 제공함.
+2. 주요 사용자
+  - 관광객 : 지도와 챗봇을 활용해 효율적이고 만족도 있는 여행을 원하는 사람 
+  - 지역주민 : 자신만이 아는 지역의 매력을 알리고싶은 사람. 주변에 볼 만한 곳을 찾기 위해서
+3. 핵심 기능 요약   
+  - 커뮤니티 : 익명 게시판으로, 서로의 경험을 공유. CRUD와 게시판에서 게시글 검색, 게시글 좋아요 기능 구현
+  - 챗봇 : OpenAI GPT-5-mini 기반 관광지, 여행코스, 축제 등 사용자의 질문에 응답
+  - 시각화 지도 : 관광지, 여행코스, 축제의 위치정보를 시각화 지도로 제공, 필터에 맞는 랜덤한 장소 3개 추천 기능
+
+## 느낀점 
+1. 박예담    
+ GIT을 사용한 협업을 처음 경험했고, 코드 구성을 AI로 하다보니 스스로 코드의 어디가 어떻게 바뀌는 건지 파악을 잘 하지못해 충돌이 많이 발생했습니다. 이과정에서 팀원분들께서 좋은 피드백과 방법을 함께 고민해주시고 찾아주셔서 협업에서 팀원의 소중함을 느낄 수 있었습니다. 
+2. 박은하    
+
+3. 권다빈    
 
 
+## 배운점 
+1. 박예담    
+GIt을 통해 협업할때 각자의 파일을 안건드는게 얼마나 중요한지 뼈저리게 느꼈습니다. AI 를 사용해서 처음 코딩을 하다보니 그 과정에서 어떤파일이 수정되었는지 파악하기 어려웠습니다. 그러다보니 충돌이 많이 발생하게 되었습니다. 코딩을 할때 세분화하여 commit 하는 것과 어떤 파일이 수정된건지 보면서 진행해야한다는 점을 몸소 느꼈습니다. 
+2. 박은하   
 
-## Getting started
+3. 권다빈     
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+ 
+## 기능명세서 
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://lab.ssafy.com/ekqlsekqls8857/vibe-coding.git
-git branch -M master
-git push -uf origin master
-```
-
-## Integrate with your tools
-
-* [Set up project integrations](https://lab.ssafy.com/ekqlsekqls8857/vibe-coding/-/settings/integrations)
-
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+| 구분 | 기능명 | 상세 내용 |
+| :--- | :---: | :--- |
+| **커뮤니티** | 익명 게시판 CRUD | 로그인 없이 누구나 자유롭게 게시글을 작성, 조회할 수 있는 가벼운 소통 공간 제공 |
+| **커뮤니티** | 비밀번호 설정 | 게시글 작성 시 숫자 4자리 비밀번호를 설정하여, 추후 본인 확인을 통한 게시글 수정 및 삭제 권한 부여 |
+| **커뮤니티** | 좋아요 & 검색 | 유익한 게시글에 공감을 표시하는 좋아요 기능 및 제목·본문 키워드를 실시간 매칭하는 게시글 검색 기능 |
+| **커뮤니티** | 익명 댓글 작성 | 로그인 장벽 없이 게시글 내에서 자유롭게 의견과 피드백을 주고받을 수 있는 익명 댓글 등록 기능 |
+| **커뮤니티** | 게시글 정렬 | 실시간으로 업데이트되는 부산 로컬 정보를 가장 빠르게 확인할 수 있도록 최신 작성글 순서로 자동 정렬 |
+| **커뮤니티** | 이미지 등록 | 게시글에 사용자의 PC에 있는 이미지를 첨부하는 기능 |
+| **시각화 지도** | 지도 시각화 | 오픈소스 라이브러리인 Leaflet.js를 커스텀 연동하여, 부산 주요 관광지·축제의 위치 정보를 마커와 오버레이로 반응형 지도에 시각화 |
+| **시각화 지도** | 필터 및 랜덤 추천 | 관광지, 축제 등 사용자가 선택한 카테고리 필터에 맞추어 조건에 부합하는 장소 3곳을 무작위로 추출 및 추천하는 기능 구현 |
+| **챗봇** | 사용자 채팅 | OpenAI API Key로 gpt-5-mini 모델을 연동하여, 부산의 축제 일정, 추천 여행 코스 등 사용자 자연어 질문에 실시간으로 답변을 제공하는 메신저 형태의 인공지능 챗봇 |

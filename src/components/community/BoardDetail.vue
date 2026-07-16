@@ -260,12 +260,16 @@ h4 {
 
 .badge,
 .tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
   font-size: 0.8rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .summary {

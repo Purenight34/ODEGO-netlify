@@ -8,7 +8,7 @@
         <h1>
           당신의 지역과 여행을<br />
           더 특별하게,
-          <span>LocalHub</span>
+          <span>ODEGO</span>
         </h1>
 
         <p class="description">

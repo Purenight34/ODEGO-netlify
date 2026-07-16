@@ -175,22 +175,28 @@ watch(
           삭제
         </button>
 
-        <template v-if="isPasswordMode">
-          <input
-            :value="passwordInput"
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            placeholder="비밀번호 (숫자 4자리)"
-            @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
-            class="password-input inline"
-          />
-          <button type="button" class="secondary-button compact" @click="verifyPassword">확인</button>
-          <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
-        </template>
+        <!-- password-panel moved below .detail-footer to appear on its own line -->
 
       </div>
       <span>조회수 {{ post.views }}</span>
+    </div>
+
+    <div v-if="isPasswordMode" class="password-panel">
+      <div class="password-row">
+        <input
+          :value="passwordInput"
+          type="password"
+          inputmode="numeric"
+          maxlength="4"
+          placeholder="비밀번호 (숫자 4자리)"
+          @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
+          class="password-input"
+        />
+        <div class="password-actions">
+          <button type="button" class="secondary-button compact" @click="verifyPassword">확인</button>
+          <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
+        </div>
+      </div>
     </div>
 
     <div class="detail-layout">
@@ -423,6 +429,36 @@ h4 {
   font-size: 0.9rem;
   margin-left: 0.5rem;
   margin-right: 0.25rem;
+}
+
+.password-panel {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.password-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.password-row .password-input {
+  height: 2rem;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 240px;
+}
+
+.password-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.password-actions .secondary-button.compact {
+  width: fit-content;
 }
 
 label {

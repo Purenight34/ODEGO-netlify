@@ -37,7 +37,7 @@ import ChatInput from './ChatInput.vue';
 const emit = defineEmits(['close']);
 
 const messages = ref([
-  { role: 'bot', content: '안녕하세요! LocalHub AI입니다' },
+  { role: 'bot', content: '안녕하세요! ODEGO AI입니다' },
   { role: 'bot', content: '부산 여행에 대해 무엇이든 물어보세요.' }
 ]);
 

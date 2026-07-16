@@ -45,6 +45,7 @@ const editForm = reactive({
 })
 const isPasswordMode = ref(false)
 const requestedAction = ref(null)
+const currentImageIndex = ref(0)
 
 function requestEditAuth() {
   requestedAction.value = 'edit'
@@ -97,6 +98,7 @@ watch(
     if (value) {
       editForm.title = value.title
       editForm.content = value.content
+      currentImageIndex.value = 0
     }
     isPasswordMode.value = false
   },
@@ -146,12 +148,19 @@ watch(
     </div>
 
     <template v-else>
+      <div v-if="post.images && post.images.length" class="image-carousel">
+        <div class="carousel-track" :style="{ transform: `translateX(-${currentImageIndex * 100}%)` }">
+          <div class="carousel-slide" v-for="(src, i) in post.images" :key="i">
+            <img :src="src" alt="post image" class="post-image" />
+          </div>
+        </div>
+        <button v-if="post.images.length > 1" type="button" class="carousel-prev" @click="currentImageIndex = (currentImageIndex - 1 + post.images.length) % post.images.length">‹</button>
+        <button v-if="post.images.length > 1" type="button" class="carousel-next" @click="currentImageIndex = (currentImageIndex + 1) % post.images.length">›</button>
+      </div>
       <p class="content">{{ post.content }}</p>
     </template>
 
-    <div class="tag-list">
-      <span v-for="tag in post.tags" :key="tag" class="tag">{{ tag }}</span>
-    </div>
+    <!-- tags removed from detail view -->
 
     <div class="detail-footer">
       <div class="action-group">
@@ -175,22 +184,29 @@ watch(
           삭제
         </button>
 
-        <template v-if="isPasswordMode">
-          <input
-            :value="passwordInput"
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            placeholder="비밀번호 (숫자 4자리)"
-            @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
-            class="password-input inline"
-          />
-          <button type="button" class="secondary-button compact" @click="verifyPassword">확인</button>
-          <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
-        </template>
+        <!-- password-panel moved below .detail-footer to appear on its own line -->
 
       </div>
       <span>조회수 {{ post.views }}</span>
+    </div>
+
+    <div v-if="isPasswordMode" class="password-panel">
+      <div class="password-row">
+        <input
+          :value="passwordInput"
+          type="password"
+          inputmode="numeric"
+          maxlength="4"
+          placeholder="비밀번호 (숫자 4자리)"
+          @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
+          class="password-input"
+        />
+        <div class="password-actions">
+          <button type="button" class="secondary-button compact" @click="verifyPassword">확인</button>
+          <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
+        </div>
+      </div>
+      <p v-if="passwordError" class="password-error">{{ passwordError }}</p>
     </div>
 
     <div class="detail-layout">
@@ -260,12 +276,16 @@ h4 {
 
 .badge,
 .tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
   font-size: 0.8rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .summary {
@@ -279,6 +299,56 @@ h4 {
   color: #475569;
   line-height: 1.7;
 }
+
+.post-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  margin: 0.6rem 0;
+  background: #f8fafc;
+}
+
+.image-carousel {
+  position: relative;
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 320ms ease-in-out;
+  width: 100%;
+}
+
+.carousel-slide {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 420px;
+}
+
+.carousel-prev,
+.carousel-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.carousel-prev { left: 8px }
+.carousel-next { right: 8px }
 
 .tag-list {
   display: flex;
@@ -419,6 +489,42 @@ h4 {
   font-size: 0.9rem;
   margin-left: 0.5rem;
   margin-right: 0.25rem;
+}
+
+.password-panel {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.password-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.password-row .password-input {
+  height: 2rem;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+  margin: 0;
+  max-width: 240px;
+}
+
+.password-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.password-actions .secondary-button.compact {
+  width: fit-content;
+}
+
+.password-error {
+  margin: 0.25rem 0 0 0;
+  color: #dc2626;
+  font-size: 0.82rem;
 }
 
 label {

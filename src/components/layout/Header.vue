@@ -1,34 +1,37 @@
 <template>
   <header class="header">
     <div class="container">
-      <a href="#home" class="logo">
-        <span class="logo-icon">📍</span>
-        <span class="logo-text">LocalHub</span>
-      </a>
+          <a href="#home" class="logo">
+            <span class="logo-text">ODEGO</span>
+          </a>
 
-      <nav class="nav">
-        <a
-          v-for="item in navItems"
-          :key="item.id"
-          :href="`#${item.id}`"
-          class="nav-item"
-          :class="{ active: activeSection === item.id }"
-          @click="activeSection = item.id"
-        >
-          {{ item.label }}
-        </a>
-      </nav>
+          <nav class="nav">
+            <a
+              v-for="item in navItems"
+              :key="item.id"
+              :href="`#${item.id}`"
+              class="nav-item"
+              :class="{ active: activeSection === item.id }"
+              @click="activeSection = item.id"
+            >
+              <span class="nav-content">
+                <component :is="item.icon" class="nav-icon" size="20" />
+                <span class="nav-label">{{ item.label }}</span>
+              </span>
+            </a>
+          </nav>
     </div>
   </header>
 </template>
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { Home, Users, MapPin } from 'lucide-vue-next'
 
 const navItems = [
-  { id: 'home', label: '홈' },
-  { id: 'community', label: '커뮤니티' },
-  { id: 'place', label: '추천 장소' },
+  { id: 'home', label: '홈', icon: Home },
+  { id: 'community', label: '커뮤니티', icon: Users },
+  { id: 'place', label: '추천 장소', icon: MapPin },
 ]
 
 const activeSection = ref('home')
@@ -107,7 +110,11 @@ onBeforeUnmount(() => {
 
 .logo-icon{
 
-    font-size:30px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
 
 }
 
@@ -129,20 +136,30 @@ onBeforeUnmount(() => {
 
 }
 
+.nav-icon{
+  display:none;
+  vertical-align:middle;
+  margin-right:6px;
+}
+
+.nav-label{
+  display:inline;
+}
+
 .nav-item{
+  text-decoration:none;
+  color:#333;
+  font-size:18px;
+  font-weight:600;
+  transition:.3s;
+}
 
-    position:relative;
-
-    text-decoration:none;
-
-    color:#333;
-
-    font-size:18px;
-
-    font-weight:600;
-
-    transition:.3s;
-
+.nav-content{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
 }
 
 .nav-item:hover{
@@ -151,37 +168,13 @@ onBeforeUnmount(() => {
 
 }
 
-.nav-item::after{
 
-    content:"";
-
-    position:absolute;
-
-    left:0;
-    bottom:-8px;
-
-    width:0%;
-
-    height:2px;
-
-    background:#2D7FF9;
-
-    transition:.3s;
-
-}
-
-.nav-item:hover::after{
-
-    width:100%;
-
+.nav-content::after{
+  display: none;
 }
 
 .nav-item.active {
-    color:#2D7FF9;
-}
-
-.nav-item.active::after {
-    width:100%;
+  color:#2D7FF9;
 }
 
 /* Tablet */
@@ -223,6 +216,13 @@ onBeforeUnmount(() => {
     font-size:15px;
 
 }
+
+
+/* Show icons instead of text on small screens */
+.nav-label{ display:none; }
+.nav-icon{ display:inline-block; }
+
+/* underline removed intentionally */
 
 }
 

@@ -8,7 +8,7 @@
       </div>
 
       <div class="info">
-        <h3>LocalHub AI</h3>
+        <h3>ODEGO AI</h3>
 
         <div class="status">
           <span class="dot"></span>

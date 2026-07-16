@@ -20,7 +20,7 @@
     </div>
 
     <p class="notice">
-      LocalHub AI는 참고용 답변을 제공합니다.
+      ODEGO AI는 참고용 답변을 제공합니다.
     </p>
 
   </div>

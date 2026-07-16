@@ -46,6 +46,8 @@ const emit = defineEmits(['select-post'])
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  padding: 0.6rem;
+  border-radius: 12px;
 }
 
 .empty {

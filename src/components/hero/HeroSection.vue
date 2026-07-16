@@ -8,7 +8,7 @@
         <h1>
           당신의 지역과 여행을<br />
           더 특별하게,
-          <span>LocalHub</span>
+          <span>ODEGO</span>
         </h1>
 
         <p class="description">
@@ -16,7 +16,6 @@
           다양한 사람들과 자유롭게 소통하며 새로운 장소를 발견해보세요.
         </p>
 
-        <button>커뮤니티 시작하기 →</button>
       </div>
     </div>
   </section>
@@ -24,6 +23,16 @@
 
 <script setup>
 import heroImage from '@/assets/images/busan.jpg';
+
+    const goToCommunity = () => {
+      const el = document.getElementById('community')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        // fallback: update hash
+        window.location.hash = '#community'
+      }
+    }
 </script>
 
 <style scoped>

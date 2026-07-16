@@ -22,7 +22,7 @@ import Chatbot from './components/chatbot/Chatbot.vue'
   background: #ffffff;
   display: grid;
   gap: 3rem;
-  padding: 1.5rem 1.25rem 3rem;
+ 
 }
 
 html,

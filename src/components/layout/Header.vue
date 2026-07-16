@@ -1,34 +1,35 @@
 <template>
   <header class="header">
     <div class="container">
-      <a href="#home" class="logo">
-        <span class="logo-icon">📍</span>
-        <span class="logo-text">LocalHub</span>
-      </a>
+          <a href="#home" class="logo">
+            <span class="logo-text">ODEGO</span>
+          </a>
 
-      <nav class="nav">
-        <a
-          v-for="item in navItems"
-          :key="item.id"
-          :href="`#${item.id}`"
-          class="nav-item"
-          :class="{ active: activeSection === item.id }"
-          @click="activeSection = item.id"
-        >
-          {{ item.label }}
-        </a>
-      </nav>
+          <nav class="nav">
+            <a
+              v-for="item in navItems"
+              :key="item.id"
+              :href="`#${item.id}`"
+              class="nav-item"
+              :class="{ active: activeSection === item.id }"
+              @click="activeSection = item.id"
+            >
+              <component :is="item.icon" class="nav-icon" size="20" />
+              <span class="nav-label">{{ item.label }}</span>
+            </a>
+          </nav>
     </div>
   </header>
 </template>
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { Home, Users, MapPin } from 'lucide-vue-next'
 
 const navItems = [
-  { id: 'home', label: '홈' },
-  { id: 'community', label: '커뮤니티' },
-  { id: 'place', label: '추천 장소' },
+  { id: 'home', label: '홈', icon: Home },
+  { id: 'community', label: '커뮤니티', icon: Users },
+  { id: 'place', label: '추천 장소', icon: MapPin },
 ]
 
 const activeSection = ref('home')
@@ -107,7 +108,11 @@ onBeforeUnmount(() => {
 
 .logo-icon{
 
-    font-size:30px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
 
 }
 
@@ -127,6 +132,16 @@ onBeforeUnmount(() => {
 
     gap:50px;
 
+}
+
+.nav-icon{
+  display:none;
+  vertical-align:middle;
+  margin-right:6px;
+}
+
+.nav-label{
+  display:inline;
 }
 
 .nav-item{
@@ -223,6 +238,25 @@ onBeforeUnmount(() => {
     font-size:15px;
 
 }
+
+/* Center the underline under the icon when labels are hidden */
+.nav-item::after{
+  left:50%;
+  transform:translateX(-50%);
+  width:0;
+}
+
+.nav-item:hover::after{
+  width:20px;
+}
+
+.nav-item.active::after{
+  width:20px;
+}
+
+/* Show icons instead of text on small screens */
+.nav-label{ display:none; }
+.nav-icon{ display:inline-block; }
 
 }
 

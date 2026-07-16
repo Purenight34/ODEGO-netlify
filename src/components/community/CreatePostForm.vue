@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 const emit = defineEmits(['submit'])
 
@@ -10,8 +10,21 @@ const form = reactive({
   category: '맛집'
 })
 
+const error = ref('')
+
+function onPasswordInput(e) {
+  // allow only digits, limit to 4 characters
+  form.password = e.target.value.replace(/\D/g, '').slice(0, 4)
+}
+
 function submit() {
   if (!form.title.trim() || !form.content.trim() || !form.password.trim()) {
+    error.value = '모든 필드를 입력하세요.'
+    return
+  }
+
+  if (!/^\d{4}$/.test(form.password)) {
+    error.value = '비밀번호는 숫자 4자리여야 합니다.'
     return
   }
 
@@ -26,6 +39,7 @@ function submit() {
   form.content = ''
   form.password = ''
   form.category = '맛집'
+  error.value = ''
 }
 </script>
 
@@ -39,7 +53,8 @@ function submit() {
       <option value="행사/축제">행사/축제</option>
       <option value="기타">기타</option>
     </select>
-    <input v-model="form.password" type="password" maxlength="4" placeholder="비밀번호 (숫자 4자리)" class="field" />
+    <input v-model="form.password" @input="onPasswordInput" type="password" maxlength="4" placeholder="비밀번호 (숫자 4자리)" class="field" />
+    <p v-if="error" class="error-text">{{ error }}</p>
     <textarea v-model="form.content" rows="5" placeholder="내용" class="field" />
     <div class="actions">
       <button type="submit" class="submit-button">등록</button>

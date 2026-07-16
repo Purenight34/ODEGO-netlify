@@ -142,9 +142,14 @@ function addCommentToPost() {
   commentText.value = ''
 }
 
-function verifyPassword(postId) {
+function verifyPassword(postId, action) {
   const target = posts.value.find((post) => post.id === postId)
   if (!target) return
+  // ensure password is exactly 4 digits
+  if (!/^\d{4}$/.test(passwordInput.value)) {
+    passwordError.value = '비밀번호는 숫자 4자리여야 합니다.'
+    return
+  }
 
   if (passwordInput.value !== target.password) {
     passwordError.value = '비밀번호가 일치하지 않습니다.'
@@ -154,6 +159,13 @@ function verifyPassword(postId) {
   passwordError.value = ''
   passwordInput.value = ''
   authenticatedPostId.value = postId
+
+  // perform requested action immediately
+  if (action === 'edit') {
+    openEditMode()
+  } else if (action === 'delete') {
+    deletePost(postId)
+  }
 }
 
 watch(searchTerm, () => {
@@ -169,10 +181,6 @@ watch(searchTerm, () => {
         <h2>실시간으로 소통하는 부산 커뮤니티</h2>
         <p class="description">검색하고, 읽고, 댓글을 남기며 다른 여행자와 이야기를 나눠보세요.</p>
       </div>
-      <button class="write-button" @click="toggleCreateForm">
-        <span class="plus-icon">✎</span>
-        글쓰기
-      </button>
     </header>
 
     <div class="section-block">

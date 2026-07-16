@@ -44,6 +44,17 @@ const editForm = reactive({
   content: ''
 })
 const isPasswordMode = ref(false)
+const requestedAction = ref(null)
+
+function requestEditAuth() {
+  requestedAction.value = 'edit'
+  openPasswordMode()
+}
+
+function requestDeleteAuth() {
+  requestedAction.value = 'delete'
+  openPasswordMode()
+}
 
 function likePost() {
   if (props.post) {
@@ -71,7 +82,7 @@ function submitEdit() {
 
 function verifyPassword() {
   if (props.post) {
-    emit('verify-password', props.post.id)
+    emit('verify-password', props.post.id, requestedAction.value)
   }
 }
 
@@ -98,6 +109,12 @@ watch(
     if (value) {
       isPasswordMode.value = false
       emit('update:password-input', '')
+      if (requestedAction.value === 'edit') {
+        editPost()
+      } else if (requestedAction.value === 'delete') {
+        deletePost()
+      }
+      requestedAction.value = null
     }
   }
 )
@@ -129,7 +146,6 @@ watch(
     </div>
 
     <template v-else>
-      <p class="summary">{{ post.summary }}</p>
       <p class="content">{{ post.content }}</p>
     </template>
 
@@ -140,11 +156,39 @@ watch(
     <div class="detail-footer">
       <div class="action-group">
         <button class="like-button" @click="likePost">❤️ {{ post.likes }}</button>
-        <button v-if="!isAuthenticated && !isPasswordMode" class="auth-link" @click="openPasswordMode">수정/삭제 인증</button>
-        <template v-else-if="isAuthenticated">
-          <button class="secondary-button" @click="editPost">수정</button>
-          <button class="secondary-button danger" @click="deletePost">삭제</button>
+
+        <button
+          type="button"
+          class="secondary-button"
+          :class="{ disabled: !isAuthenticated }"
+          @click="isAuthenticated ? editPost() : requestEditAuth()"
+        >
+          수정
+        </button>
+
+        <button
+          type="button"
+          class="secondary-button danger"
+          :class="{ disabled: !isAuthenticated }"
+          @click="isAuthenticated ? deletePost() : requestDeleteAuth()"
+        >
+          삭제
+        </button>
+
+        <template v-if="isPasswordMode">
+          <input
+            :value="passwordInput"
+            type="password"
+            inputmode="numeric"
+            maxlength="4"
+            placeholder="비밀번호 (숫자 4자리)"
+            @input="emit('update:password-input', $event.target.value.replace(/\D/g, '').slice(0, 4))"
+            class="password-input inline"
+          />
+          <button type="button" class="secondary-button compact" @click="verifyPassword">확인</button>
+          <button type="button" class="secondary-button" @click="() => { isPasswordMode = false; requestedAction.value = null }">취소</button>
         </template>
+
       </div>
       <span>조회수 {{ post.views }}</span>
     </div>
@@ -153,7 +197,13 @@ watch(
       <div class="detail-content">
         <div class="comment-box">
           <h4>댓글 {{ post.comments?.length || 0 }}</h4>
-          <textarea :value="commentText" rows="3" placeholder="댓글을 입력해보세요" @input="emit('update:comment-text', $event.target.value)" />
+          <textarea
+            :value="commentText"
+            rows="3"
+            placeholder="댓글을 입력해보세요"
+            @input="emit('update:comment-text', $event.target.value)"
+            class="comment-input"
+          />
           <button class="primary-button" @click="emit('add-comment')">댓글 작성</button>
           <ul v-if="post.comments?.length" class="comment-list">
             <li v-for="comment in post.comments" :key="comment.id" class="comment-item">
@@ -165,22 +215,6 @@ watch(
       </div>
 
       <aside class="detail-side">
-        <div v-if="isPasswordMode" class="password-box">
-          <div class="password-head">
-            <p class="password-title">글 수정/삭제</p>
-            <button class="icon-button" type="button" @click="isPasswordMode = false">✕</button>
-          </div>
-          <input
-            :value="passwordInput"
-            type="number"
-            inputmode="numeric"
-            placeholder="비밀번호 (숫자)"
-            @input="emit('update:password-input', $event.target.value.slice(0, 4))"
-            class="password-input"
-          />
-          <button class="secondary-button compact" @click="verifyPassword">확인</button>
-          <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
-        </div>
       </aside>
     </div>
   </article>
@@ -286,6 +320,10 @@ h4 {
   color: #334155;
 }
 
+.secondary-button.disabled {
+  opacity: 0.6;
+}
+
 .like-button {
   background: #fee2e2;
   color: #dc2626;
@@ -306,7 +344,6 @@ h4 {
 
 .detail-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
   gap: 1rem;
   align-items: start;
 }
@@ -376,6 +413,14 @@ h4 {
   font-size: 0.85rem;
 }
 
+.password-input.inline {
+  height: 2rem;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  margin-right: 0.25rem;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -405,6 +450,24 @@ textarea {
   gap: 0.45rem;
   padding-left: 1rem;
   color: #475569;
+}
+
+.comment-box {
+  width: 100%;
+}
+
+.comment-box .comment-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  resize: none;
+}
+
+.comment-box .primary-button {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
 }
 
 .comment-item {

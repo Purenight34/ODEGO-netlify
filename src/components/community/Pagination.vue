@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   currentPage: {
     type: Number,
     required: true
@@ -12,10 +14,16 @@ defineProps({
 
 const emit = defineEmits(['change-page'])
 
+const currentPage = computed(() => props.currentPage)
+const totalPages = computed(() => props.totalPages)
+
 function changePage(page) {
-  if (page < 1 || page > totalPages) return
-  emit('change-page', page)
+  const p = Number(page)
+  if (Number.isNaN(p) || p < 1 || p > totalPages.value) return
+  emit('change-page', p)
 }
+
+const pages = computed(() => Array.from({ length: totalPages.value }, (_, i) => i + 1))
 </script>
 
 <template>
@@ -24,7 +32,7 @@ function changePage(page) {
       이전
     </button>
     <button
-      v-for="page in totalPages"
+      v-for="page in pages"
       :key="page"
       type="button"
       :class="{ active: page === currentPage }"

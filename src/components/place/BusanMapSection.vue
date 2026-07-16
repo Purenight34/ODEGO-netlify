@@ -244,7 +244,6 @@ function refreshRecommendations() {
 	const pool = visiblePlaces.value
 
 	recommendedPlaces.value = pickRandomPlaces(pool, 3)
-	selectedPlace.value = recommendedPlaces.value[0] ?? null
 }
 
 function setCategory(categoryKey) {

@@ -54,8 +54,8 @@ function submit() {
       <option value="기타">기타</option>
     </select>
     <input v-model="form.password" @input="onPasswordInput" type="password" maxlength="4" placeholder="비밀번호 (숫자 4자리)" class="field" />
-    <p v-if="error" class="error-text">{{ error }}</p>
     <textarea v-model="form.content" rows="5" placeholder="내용" class="field" />
+    <p v-if="error" class="error-text">{{ error }}</p>
     <div class="actions">
       <button type="submit" class="submit-button">등록</button>
     </div>
@@ -93,5 +93,12 @@ textarea {
   background: #2563eb;
   color: white;
   cursor: pointer;
+}
+
+.error-text {
+  margin: 0.25rem 0 0 0;
+  color: #dc2626;
+  font-size: 0.9rem;
+  text-align: left;
 }
 </style>

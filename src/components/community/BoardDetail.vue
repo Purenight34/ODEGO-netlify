@@ -198,7 +198,13 @@ watch(
       <div class="detail-content">
         <div class="comment-box">
           <h4>댓글 {{ post.comments?.length || 0 }}</h4>
-          <textarea :value="commentText" rows="3" placeholder="댓글을 입력해보세요" @input="emit('update:comment-text', $event.target.value)" />
+          <textarea
+            :value="commentText"
+            rows="3"
+            placeholder="댓글을 입력해보세요"
+            @input="emit('update:comment-text', $event.target.value)"
+            class="comment-input"
+          />
           <button class="primary-button" @click="emit('add-comment')">댓글 작성</button>
           <ul v-if="post.comments?.length" class="comment-list">
             <li v-for="comment in post.comments" :key="comment.id" class="comment-item">
@@ -339,7 +345,6 @@ h4 {
 
 .detail-layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
   gap: 1rem;
   align-items: start;
 }
@@ -446,6 +451,24 @@ textarea {
   gap: 0.45rem;
   padding-left: 1rem;
   color: #475569;
+}
+
+.comment-box {
+  width: 100%;
+}
+
+.comment-box .comment-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  resize: none;
+}
+
+.comment-box .primary-button {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
 }
 
 .comment-item {

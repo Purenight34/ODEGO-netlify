@@ -149,9 +149,7 @@ watch(
       <p class="content">{{ post.content }}</p>
     </template>
 
-    <div class="tag-list">
-      <span v-for="tag in post.tags" :key="tag" class="tag">{{ tag }}</span>
-    </div>
+    <!-- tags removed from detail view -->
 
     <div class="detail-footer">
       <div class="action-group">

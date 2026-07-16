@@ -53,7 +53,7 @@ export function createPostEntry(payload, id = Date.now()) {
     likes: 0,
     summary: payload.content.slice(0, 60),
     content: payload.content,
-    tags: ['익명', '새글'],
+    tags: [],
     password: payload.password,
     comments: []
   })

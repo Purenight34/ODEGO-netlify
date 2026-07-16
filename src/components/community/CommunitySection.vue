@@ -142,7 +142,7 @@ function addCommentToPost() {
   commentText.value = ''
 }
 
-function verifyPassword(postId) {
+function verifyPassword(postId, action) {
   const target = posts.value.find((post) => post.id === postId)
   if (!target) return
   // ensure password is exactly 4 digits
@@ -159,6 +159,13 @@ function verifyPassword(postId) {
   passwordError.value = ''
   passwordInput.value = ''
   authenticatedPostId.value = postId
+
+  // perform requested action immediately
+  if (action === 'edit') {
+    openEditMode()
+  } else if (action === 'delete') {
+    deletePost(postId)
+  }
 }
 
 watch(searchTerm, () => {

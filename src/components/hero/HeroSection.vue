@@ -16,7 +16,6 @@
           다양한 사람들과 자유롭게 소통하며 새로운 장소를 발견해보세요.
         </p>
 
-        <button>커뮤니티 시작하기 →</button>
       </div>
     </div>
   </section>
@@ -24,6 +23,16 @@
 
 <script setup>
 import heroImage from '@/assets/images/busan.jpg';
+
+    const goToCommunity = () => {
+      const el = document.getElementById('community')
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else {
+        // fallback: update hash
+        window.location.hash = '#community'
+      }
+    }
 </script>
 
 <style scoped>

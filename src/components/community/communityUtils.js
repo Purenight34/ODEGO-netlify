@@ -47,7 +47,7 @@ export function createPostEntry(payload, id = Date.now()) {
     id,
     title: payload.title,
     author: '익명',
-    category: '자유게시판',
+    category: payload.category || '자유게시판',
     date: new Date().toISOString().slice(0, 10),
     views: 0,
     likes: 0,

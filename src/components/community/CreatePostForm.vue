@@ -7,10 +7,12 @@ const form = reactive({
   title: '',
   content: '',
   password: '',
-  category: '맛집'
+  category: '맛집',
+  image: ''
 })
 
 const error = ref('')
+const preview = ref('')
 
 function onPasswordInput(e) {
   // allow only digits, limit to 4 characters
@@ -33,13 +35,37 @@ function submit() {
     content: form.content.trim(),
     password: form.password.trim(),
     category: form.category
+    ,image: form.image || ''
   })
 
   form.title = ''
   form.content = ''
   form.password = ''
   form.category = '맛집'
+  form.image = ''
+  preview.value = ''
   error.value = ''
+}
+
+function onFileChange(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) {
+    form.image = ''
+    preview.value = ''
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    error.value = '이미지 파일만 업로드 가능합니다.'
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    form.image = reader.result
+    preview.value = reader.result
+  }
+  reader.readAsDataURL(file)
 }
 </script>
 
@@ -55,6 +81,11 @@ function submit() {
     </select>
     <input v-model="form.password" @input="onPasswordInput" type="password" maxlength="4" placeholder="비밀번호 (숫자 4자리)" class="field" />
     <textarea v-model="form.content" rows="5" placeholder="내용" class="field" />
+    <label class="file-button">
+      <input type="file" accept="image/*" @change="onFileChange" />
+      <span class="file-button-text">사진 추가</span>
+    </label>
+    <img v-if="preview" :src="preview" alt="preview" class="image-preview" />
     <p v-if="error" class="error-text">{{ error }}</p>
     <div class="actions">
       <button type="submit" class="submit-button">등록</button>
@@ -100,5 +131,41 @@ textarea {
   color: #dc2626;
   font-size: 0.9rem;
   text-align: left;
+}
+
+
+.file-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #334155;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.file-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-button-text {
+  pointer-events: none;
+}
+
+.image-preview {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 0.4rem;
+  object-fit: cover;
 }
 </style>

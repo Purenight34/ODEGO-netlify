@@ -146,6 +146,7 @@ watch(
     </div>
 
     <template v-else>
+      <img v-if="post.image" :src="post.image" alt="post image" class="post-image" />
       <p class="content">{{ post.content }}</p>
     </template>
 
@@ -287,6 +288,14 @@ h4 {
   margin: 0;
   color: #475569;
   line-height: 1.7;
+}
+
+.post-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 0.6rem 0;
+  background: #f8fafc;
 }
 
 .tag-list {

@@ -146,7 +146,6 @@ watch(
     </div>
 
     <template v-else>
-      <p class="summary">{{ post.summary }}</p>
       <p class="content">{{ post.content }}</p>
     </template>
 
